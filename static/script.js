@@ -409,6 +409,7 @@ class FraudEngine {
 
 // === 4. rendering Logic ===
 function renderDashboard(data) {
+  currentData = data; // Update global state for export
   const { analysis, graph } = data;
 
   // KPIs
@@ -461,6 +462,39 @@ function renderDashboard(data) {
       tbody.appendChild(tr);
     });
   }
+
+  // Export Handler
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    exportBtn.onclick = () => {
+      if (!currentData || !currentData.analysis) {
+        alert("No analysis data available to export.");
+        return;
+      }
+
+      // Populate summary details before export
+      const exportData = {
+        suspicious_accounts: currentData.analysis.suspicious_accounts,
+        fraud_rings: currentData.analysis.fraud_rings,
+        summary: {
+          total_accounts_analyzed: currentData.graph.nodes.length,
+          suspicious_accounts_flagged: currentData.analysis.suspicious_accounts.length,
+          fraud_rings_detected: currentData.analysis.fraud_rings.length,
+          processing_time_seconds: currentData.analysis.summary.processing_time_seconds
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fraud_analysis_report.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+  }
 }
 
 function calculateAvgRisk(accounts) {
@@ -489,19 +523,19 @@ function initGraph(data) {
     .force('link', d3.forceLink(data.links).id(d => d.id).distance(60))
     .force('charge', d3.forceManyBody().strength(-150))
     .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collide', d3.forceCollide(15));
+    .force('collide', d3.forceCollide(20)); // Increased collision radius
 
-  // Links
+  // Links - IMPROVED VISIBILITY
   const link = g.append('g').selectAll('line')
     .data(data.links).join('line')
     .attr('stroke', d => d.type === 'fraud' ? 'var(--risk-high)' : d.type === 'suspicious' ? 'var(--risk-med)' : '#30363d')
-    .attr('stroke-width', d => d.type === 'fraud' ? 2 : 1)
-    .attr('stroke-opacity', 0.5);
+    .attr('stroke-width', d => d.type === 'fraud' ? 3 : d.type === 'suspicious' ? 2 : 1) // Thicker fraud links
+    .attr('stroke-opacity', d => d.type === 'fraud' || d.type === 'suspicious' ? 1.0 : 0.4); // More opaque
 
-  // Nodes
+  // Nodes - IMPROVED VISIBILITY
   const node = g.append('g').selectAll('circle')
     .data(data.nodes).join('circle')
-    .attr('r', d => d.type === 'fraud' ? 6 : 4)
+    .attr('r', d => d.type === 'fraud' ? 8 : d.type === 'suspicious' ? 6 : 4) // Bigger nodes
     .attr('fill', d => d.type === 'fraud' ? 'var(--risk-high)' : d.type === 'suspicious' ? 'var(--risk-med)' : '#4b5563')
     .attr('stroke', '#161b22').attr('stroke-width', 1.5)
     .call(d3.drag().on('start', dragstart).on('drag', dragged).on('end', dragend));
@@ -528,7 +562,8 @@ function initGraph(data) {
       });
     }).on('mouseout', () => {
       tooltip.style.display = 'none';
-      link.attr('stroke-opacity', 0.5);
+      // Restore visibility logic - checking types
+      link.attr('stroke-opacity', d => d.type === 'fraud' || d.type === 'suspicious' ? 1.0 : 0.4);
       node.attr('opacity', 1);
     });
   }
@@ -554,5 +589,5 @@ function initGraph(data) {
 }
 
 function highlightNode(id) {
-  // Basic highlight placeholder
+  // Placeholder
 }
