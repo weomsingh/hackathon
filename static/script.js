@@ -64,6 +64,7 @@ function processCSV(file) {
         const analysis = engine.runAnalysis();
 
         const processingTime = ((performance.now() - startTime) / 1000).toFixed(2);
+        if (!analysis.summary) analysis.summary = {}; // Safety check
         analysis.summary.processing_time_seconds = processingTime;
 
         renderDashboard(analysis);
@@ -173,7 +174,7 @@ class FraudEngine {
       analysis: {
         suspicious_accounts: this.suspicious,
         fraud_rings: this.rings,
-        summary: {}
+        summary: { processing_time_seconds: 0 } // Initialize summary object
       },
       graph: { nodes: d3Nodes, links: d3Links }
     };
