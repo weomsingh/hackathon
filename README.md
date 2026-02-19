@@ -1,122 +1,103 @@
+# RingGuard - Money Muling Detection System
 
-# RingGuard — Financial Forensics Engine
-![Python](https://img.shields.io/badge/Python-3.x-blue?style=flat-square) ![Flask](https://img.shields.io/badge/Flask-3.0-green?style=flat-square) ![D3.js](https://img.shields.io/badge/D3.js-v7-orange?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Flask](https://img.shields.io/badge/Flask-3.0-black)
+![D3.js](https://img.shields.io/badge/D3.js-7.8.5-orange)
 
-## Live Demo
-[Deployment URL Placeholder]
+## Live Demo URL
+[to be filled]
+
+## LinkedIn Video
+[to be filled]
 
 ## Problem Statement
-Money muling is a critical component of financial crime where criminals use networks of individuals ("mules") to transfer and layer illicit funds. RingGuard is a web-based forensics engine that processes transaction logs to detect and visualize sophisticated money muling networks, specifically targeting Circular Routing, Smurfing, and Shell Chains.
+Financial institutions need fast, interpretable detection of money muling structures in raw transaction logs. This project identifies high-risk account clusters and visualizes suspicious fund movement patterns for analyst triage.
 
 ## System Architecture
 ```
-[User Browser] (HTML/JS/D3)
-      |
-      | (POST /analyze .csv)
-      v
-[Flask Server] (app.py)
-      |
-      v
-[Fraud Detection Engine] (fraud_detector.py)
-      |
-      +---> [CSV Parser] --> [Graph Builder]
-      |
-      +---> [Cycle Detection Module] (DFS)
-      |
-      +---> [Smurfing Detector] (Temporal Sliding Window)
-      |
-      +---> [Shell Chain Analyzer] (Path Tracing)
-      |
-      +---> [Legitimate Account Filter] (Heuristic Rules)
-      |
-      v
-[JSON Response] --> { suspicious_accounts, fraud_rings, graph_data }
+CSV Upload -> Flask Parser -> Fraud Detection Engine -> Graph Builder -> D3.js Visualization
+                                  |
+                                  +-> [Cycle Detection (DFS)]
+                                  +-> [Smurfing Detection]
+                                  +-> [Shell Chain Detection]
+                                  +-> [Legit Account Filter]
 ```
 
 ## Algorithm Approach
-
-### 1. Cycle Detection (Circular Routing)
-- **Algorithm**: Depth-First Search (DFS) with Path Tracking.
-- **Logic**: Iterates through all nodes. Starts a DFS to find paths of length 3-5 that return to the start node.
-- **Complexity**: `O(V + E)` (optimized with depth limit `d=5` effectively making it linear for sparse financial graphs, though theoretically exponential without limits).
-
-### 2. Smurfing Detection (Structuring)
-- **Algorithm**: Degree Analysis + Temporal Sliding Window.
-- **Logic**: Identifies nodes with High Fan-In (>10 sources) or High Fan-Out (>10 destinations). checks if `N` transactions occur within a 72-hour sliding window.
-- **Complexity**: `O(N * T log T)` where T is transactions per node (sorting timestamps).
-
-### 3. Shell Chain Detection
-- **Algorithm**: Weak-Node Path Tracing.
-- **Logic**: Identifies chains of "weak" accounts (low total volume) connecting normal accounts.
-- **Complexity**: `O(V + E)` single pass traversal.
-
-### 4. Precision Filtering
-- **Logic**: Heuristic filtering to exclude high-volume Payroll (High Out/Low In) and Merchant (High In/Low Out) accounts to reduce False Positives.
+- Cycle detection: O(V + E) DFS traversal with bounded path length (3-5), repeated per start node.
+- Smurfing detection: O(T log T) for sorted timestamp window checks plus degree checks.
+- Shell chains: O(V + E) graph traversal with constrained multi-hop path checks.
+- Legitimate account filter: O(V) node-level heuristic using in/out counterparties.
 
 ## Suspicion Score Methodology
-Scores (0-100) are assigned based on pattern severity:
+| Signal | Weight |
+|---|---:|
+| cycle_length_3 | +40 |
+| cycle_length_4 | +35 |
+| cycle_length_5 | +30 |
+| fan_in_smurfing | +25 |
+| fan_out_smurfing | +25 |
+| shell_chain | +20 |
+| high_velocity | +15 |
+| multi-pattern bonus | +10 |
 
-| Pattern | Score Weight | Description |
-| :--- | :--- | :--- |
-| **Cycle Participant** | +50 | Strongest indicator of money laundering loop. |
-| **Smurfing Hub** | +30 | Indicative of structuring/layering. |
-| **Shell Account** | +20 | Intermediate node used for obfuscation. |
-| **High Velocity** | +10 | >50 transactions total. |
-| **High Volume** | +10 | >$10k total volume moved. |
-
-*Note: Score is capped at 100.*
+Final score is capped at 100.0.
 
 ## Tech Stack
-| Component | Technology |
-| :--- | :--- |
-| **Backend** | Python 3, Flask, Gunicorn |
-| **Frontend** | HTML5, CSS3, Vanilla JavaScript |
-| **Visualization** | D3.js v7 (Force Directed Graph) |
-| **Styling** | Custom CSS (Dark Theme, Fraunces/DM Sans fonts) |
+| Layer | Technology |
+|---|---|
+| Backend | Python, Flask |
+| Detection Engine | Custom DFS/BFS + heuristic scoring |
+| Frontend | HTML, CSS, Vanilla JavaScript |
+| Visualization | D3.js v7 |
+| Deploy | Gunicorn, Procfile |
 
 ## Installation & Setup
-
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/your-username/ringguard.git
-   cd ringguard
-   ```
-
-2. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the Application**
-   ```bash
-   python app.py
-   ```
-   Server will start at `http://localhost:5000`.
+1. Clone repository.
+2. Create virtual environment.
+3. Install dependencies:
+   `pip install -r requirements.txt`
+4. Run locally:
+   `python app.py`
+5. Open:
+   `http://127.0.0.1:5000`
 
 ## API Documentation
+### POST `/analyze`
+- Content-Type: `multipart/form-data`
+- Field: `csv_file`
+- Response:
+  - `analysis.suspicious_accounts`
+  - `analysis.fraud_rings`
+  - `analysis.summary`
+  - `graph.nodes`
+  - `graph.links`
 
-### `POST /analyze`
-Uploads a CSV file for analysis.
-- **Content-Type**: `multipart/form-data`
-- **Body**: `csv_file` (File Object)
-- **Response**: JSON object containing `analysis` (results) and `graph` (nodes/links).
+### GET `/download-json`
+- Returns latest completed analysis as downloadable JSON.
+- Filename: `forensics_report.json`
 
 ## CSV Format Requirements
-The system strictly requires a CSV file with the following columns:
+Required canonical fields:
+- `transaction_id`
+- `sender_id`
+- `receiver_id`
+- `amount`
+- `timestamp`
 
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `transaction_id` | String | Unique ID |
-| `sender_id` | String | Sender Account ID |
-| `receiver_id` | String | Receiver Account ID |
-| `amount` | Float | Transaction Value |
-| `timestamp` | String | `YYYY-MM-DD HH:MM:SS` |
-
-*(Column names are case-insensitive and handle whitespace)*
+### Accepted aliases
+| Canonical | Accepted aliases |
+|---|---|
+| transaction_id | txn_id, tx_id, id |
+| sender_id | from, from_account, source, source_id |
+| receiver_id | to, to_account, target, target_id |
+| amount | value, txn_amount, transaction_amount |
+| timestamp | time, datetime, txn_time, transaction_time |
 
 ## Known Limitations
-1. **Memory**: Large datasets (>50MB) are processed in-memory.
-2. **Graph Rendering**: Visualizing 10k+ nodes via D3.js in the browser can be performance-intensive.
+- Cycle search is bounded to length 3-5.
+- Extremely dense graphs can become visually noisy.
+- Heuristic legitimate-account filtering may need domain tuning for institution-specific traffic.
 
 ## Team Members
-- [Name] - Lead Developer
+[to be filled]

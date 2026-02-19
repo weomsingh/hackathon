@@ -1,262 +1,134 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
-
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RingGuard | Forensic Intelligence Engine</title>
-
-    <!-- Fonts: Instrument Serif (Headings), Inter (UI), JetBrains Mono (Data) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-
-    <!-- Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- D3.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RingGuard - Money Muling Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
-
 <body>
+  <div class="layout">
+    <header class="topbar">
+      <div>
+        <h1>RingGuard</h1>
+        <p>Forensic Transaction Intelligence</p>
+      </div>
+      <a class="link-btn" href="{{ url_for('static', filename='sample_transactions.csv') }}">Use Sample CSV</a>
+    </header>
 
-    <div class="app-layout">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="logo-mark">
-                    <div class="logo-inner"></div>
-                </div>
-                <span class="brand-name">RingGuard</span>
-            </div>
+    <section class="card upload-card">
+      <h2>Upload Transactions</h2>
+      <p class="muted">Upload CSV to detect circular flows, smurfing patterns, and shell chains.</p>
+      <div id="dropZone" class="drop-zone">
+        <div>Drop .csv file here or click to browse</div>
+        <input id="fileInput" type="file" accept=".csv" hidden />
+      </div>
+      <div id="fileInfo" class="file-info"></div>
+      <button id="analyzeBtn" class="btn btn-primary">Analyze for Fraud Rings →</button>
+      <div id="errorBox" class="error-box"></div>
+    </section>
 
-            <nav class="nav-menu">
-                <button class="nav-item active" id="nav-dashboard">
-                    <i data-lucide="layout-grid"></i>
-                    <span>Dashboard</span>
-                </button>
-                <button class="nav-item" id="nav-analysis">
-                    <i data-lucide="network"></i>
-                    <span>Graph Analysis</span>
-                </button>
-                <div class="nav-spacer"></div>
-                <button class="nav-item" onclick="window.location.reload()">
-                    <i data-lucide="upload-cloud"></i>
-                    <span>New Upload</span>
-                </button>
-                <a href="https://github.com/your-repo" target="_blank" class="nav-item">
-                    <i data-lucide="github"></i>
-                    <span>Source</span>
-                </a>
-            </nav>
+    <section id="emptyState" class="empty-state card">
+      <div class="big-icon">🔍</div>
+      <p class="empty-title">Upload a transaction CSV to begin analysis</p>
+      <p class="muted">RingGuard will detect circular fund flows, smurfing patterns, and shell account chains</p>
+    </section>
 
-            <div class="system-status">
-                <div class="status-indicator online"></div>
-                <span>System Operational</span>
-            </div>
+    <section id="resultsSection" class="results-section" style="display:none;">
+      <div id="summaryGrid" class="summary-grid"></div>
+
+      <div class="graph-and-side">
+        <div class="card graph-card">
+          <div class="card-head">
+            <h3>Transaction Network Graph</h3>
+            <div class="muted small">Hover node for tooltip, click node for detail panel</div>
+          </div>
+          <div id="graphContainer"></div>
+          <div class="graph-controls">
+            <button id="zoomInBtn" class="pill-btn">Zoom In</button>
+            <button id="zoomOutBtn" class="pill-btn">Zoom Out</button>
+            <button id="resetViewBtn" class="pill-btn">Reset View</button>
+            <button id="highlightFraudBtn" class="pill-btn">Highlight Fraud Only</button>
+            <button id="showAllConnectionsBtn" class="pill-btn">Show All Connections</button>
+          </div>
+        </div>
+
+        <aside class="card side-card">
+          <h3>Node Detail</h3>
+          <p class="muted">Click a node to inspect account details.</p>
         </aside>
+      </div>
 
-        <!-- Main Content Area -->
-        <main class="main-content">
+      <div class="card table-card">
+        <div class="card-head between">
+          <h3>Detected Fraud Rings</h3>
+          <button id="exportTableCsvBtn" class="pill-btn">Export Table as CSV</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Ring ID</th>
+              <th>Pattern Type</th>
+              <th>Members</th>
+              <th>Risk Score</th>
+              <th>Member Accounts</th>
+            </tr>
+          </thead>
+          <tbody id="ringsTableBody"></tbody>
+        </table>
+      </div>
 
-            <!-- Top Bar -->
-            <header class="top-bar">
-                <div class="breadcrumbs">
-                    <span class="crumb-root">Forensics</span>
-                    <i data-lucide="chevron-right"></i>
-                    <span class="crumb-current" id="page-title">Upload Dataset</span>
-                </div>
-                <div class="top-actions">
-                    <button class="btn-ghost" title="Documentation">
-                        <i data-lucide="book-open"></i>
-                    </button>
-                    <button class="btn-ghost" title="Settings">
-                        <i data-lucide="settings"></i>
-                    </button>
-                </div>
-            </header>
+      <div class="card table-card">
+        <div class="card-head">
+          <h3>Flagged Accounts</h3>
+          <p class="muted">(sorted by suspicion score, highest risk first)</p>
+        </div>
+        <div class="table-tools">
+          <input id="accountSearch" type="text" placeholder="Filter by account ID, pattern, or ring ID" />
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Account ID</th>
+              <th>Suspicion Score</th>
+              <th>Ring</th>
+              <th>Detected Patterns</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="suspiciousAccountsTable"></tbody>
+        </table>
+        <div class="pagination">
+          <button id="prevPageBtn" class="pill-btn">Prev</button>
+          <span id="pageInfo" class="muted"></span>
+          <button id="nextPageBtn" class="pill-btn">Next</button>
+        </div>
+      </div>
 
-            <!-- VIEW: UPLOAD (Initial State) -->
-            <section id="view-upload" class="view-section active">
-                <div class="upload-container">
-                    <div class="upload-hero">
-                        <h1 class="hero-title">Financial Fraud Detection</h1>
-                        <p class="hero-subtitle">
-                            Upload transaction logs to detect <span class="highlight-text">Money Muling</span>,
-                            <span class="highlight-text">Smurfing</span>, and <span class="highlight-text">Shell
-                                Chains</span>.
-                        </p>
-                    </div>
+      <div class="card export-card">
+        <div class="export-actions">
+          <button id="downloadJsonBtn" class="btn btn-primary">⬇ Download JSON Report</button>
+          <button id="copyJsonBtn" class="btn btn-outline-amber">📋 Copy JSON to Clipboard</button>
+          <button id="exportCsvBtn" class="btn btn-outline-teal">📊 Export Accounts CSV</button>
+        </div>
+        <button id="togglePreviewBtn" class="pill-btn">Preview JSON Output ▼</button>
+        <pre id="jsonPreview" class="json-preview" style="display:none;"></pre>
+      </div>
+    </section>
+  </div>
 
-                    <div class="upload-card" id="dropZone">
-                        <div class="upload-content">
-                            <div class="icon-wrapper">
-                                <i data-lucide="file-up"></i>
-                            </div>
-                            <h3>Drop CSV File Here</h3>
-                            <p class="upload-hint">drag & drop or click to browse</p>
+  <div id="nodeTooltip" class="node-tooltip" style="display:none;"></div>
 
-                            <div class="file-requirements">
-                                <span><i data-lucide="check"></i> sender_id</span>
-                                <span><i data-lucide="check"></i> receiver_id</span>
-                                <span><i data-lucide="check"></i> amount</span>
-                                <span><i data-lucide="check"></i> timestamp</span>
-                            </div>
-                        </div>
-                        <input type="file" id="fileInput" accept=".csv" hidden>
+  <aside id="nodeDetailPanel" class="node-detail-panel">
+    <button id="closePanelBtn" class="panel-close">×</button>
+    <div id="nodeDetailContent"></div>
+  </aside>
 
-                        <!-- File Preview State -->
-                        <div class="file-preview-state" id="filePreview" style="display: none;">
-                            <div class="file-icon-large">CSV</div>
-                            <div class="file-details">
-                                <span class="file-name" id="fileName">transactions.csv</span>
-                                <span class="file-meta" id="fileSize">2.4 MB</span>
-                            </div>
-                            <button class="btn-icon" id="removeFileBtn"><i data-lucide="x"></i></button>
-                        </div>
-                    </div>
-
-                    <button id="analyzeBtn" class="btn-primary" disabled>
-                        <span>Run Intelligence Engine</span>
-                        <i data-lucide="arrow-right"></i>
-                    </button>
-
-                    <div id="errorBanner" class="error-banner" style="display: none;">
-                        <i data-lucide="alert-triangle"></i>
-                        <span id="errorText">Error message here</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- VIEW: DASHBOARD (Results) -->
-            <section id="view-dashboard" class="view-section" style="display: none;">
-
-                <!-- KPIs -->
-                <div class="kpi-grid" id="summaryStats">
-                    <!-- Populated by JS -->
-                </div>
-
-                <div class="grid-layout">
-                    <!-- LEFT: GRAPH -->
-                    <div class="panel graph-panel">
-                        <div class="panel-header">
-                            <div class="panel-title">
-                                <i data-lucide="git-branch"></i>
-                                <h3>Network Topology</h3>
-                            </div>
-                            <!-- Floating Controls -->
-                            <div class="graph-toolbar">
-                                <button class="tool-btn" id="zoomInBtn" title="Zoom In"><i
-                                        data-lucide="plus"></i></button>
-                                <button class="tool-btn" id="zoomOutBtn" title="Zoom Out"><i
-                                        data-lucide="minus"></i></button>
-                                <button class="tool-btn" id="resetViewBtn" title="Fit to Screen"><i
-                                        data-lucide="maximize"></i></button>
-                                <div class="divider-v"></div>
-                                <button class="tool-btn toggle" id="highlightFraudBtn" title="Focus Fraud">
-                                    <i data-lucide="alert-octagon"></i>
-                                    <span>Focus Risk</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="graph-canvas-wrapper" id="graphContainer">
-                            <!-- D3 Graph -->
-                        </div>
-
-                        <!-- Legend overlay -->
-                        <div class="graph-legend">
-                            <div class="legend-item"><span class="dot fraud"></span>Fraud Ring</div>
-                            <div class="legend-item"><span class="dot susp"></span>Suspicious</div>
-                            <div class="legend-item"><span class="dot safe"></span>Normal</div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT: INSIGHTS -->
-                    <div class="right-column">
-                        <!-- Investigation Panel (Contextual) -->
-                        <div class="panel details-panel" id="investigationPanel">
-                            <div class="panel-header">
-                                <div class="panel-title">
-                                    <i data-lucide="search"></i>
-                                    <h3>Investigation Details</h3>
-                                </div>
-                            </div>
-                            <div class="panel-body empty-state-panel">
-                                <p>Select a node or ring to view forensic details.</p>
-                            </div>
-                            <div class="panel-body content-state" id="detailContent" style="display:none;">
-                                <!-- Populated info -->
-                            </div>
-                        </div>
-
-                        <!-- Top Flags List -->
-                        <div class="panel list-panel">
-                            <div class="panel-header">
-                                <div class="panel-title">
-                                    <i data-lucide="flag"></i>
-                                    <h3>High Risk Accounts</h3>
-                                </div>
-                                <div class="search-wrap">
-                                    <i data-lucide="search"></i>
-                                    <input type="text" id="accountSearch" placeholder="Filter...">
-                                </div>
-                            </div>
-                            <div class="list-content" id="suspiciousList">
-                                <!-- Populated list -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BOTTOM: RINGS TABLE -->
-                <div class="panel table-panel">
-                    <div class="panel-header">
-                        <div class="panel-title">
-                            <i data-lucide="layers"></i>
-                            <h3>Detected Fraud Rings</h3>
-                        </div>
-                        <div class="actions">
-                            <button class="btn-secondary-sm" id="exportCsvBtn">
-                                <i data-lucide="download"></i> CSV
-                            </button>
-                        </div>
-                    </div>
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Ring ID</th>
-                                    <th>Detection Pattern</th>
-                                    <th>Complexity</th>
-                                    <th>Risk Score</th>
-                                    <th>Entities</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ringsTableBody">
-                                <!-- Rows -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </section>
-
-        </main>
-    </div>
-
-    <!-- Node Info Popover (Tooltip) -->
-    <div id="nodeTooltip" class="tooltip-popover"></div>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
-
 </html>

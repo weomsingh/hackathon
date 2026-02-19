@@ -1,396 +1,514 @@
-
-// State Management
 let currentAnalysis = null;
-let simulation = null;
-let currentZoom = d3.zoomIdentity;
+let currentGraph = null;
+let selectedNode = null;
+let d3Simulation = null;
+let zoomBehavior = null;
+let svg = null;
+let graphGroup = null;
+let nodeSelection = null;
+let linkSelection = null;
+let currentZoom = 1;
+let accountsPage = 1;
+const PAGE_SIZE = 25;
 
-// DOM Elements
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const analyzeBtn = document.getElementById('analyzeBtn');
-const viewUpload = document.getElementById('view-upload');
-const viewDashboard = document.getElementById('view-dashboard');
-const pageTitle = document.getElementById('page-title');
-const navItems = document.querySelectorAll('.nav-item');
-const errorBanner = document.getElementById('errorBanner');
+const fileInfo = document.getElementById('fileInfo');
+const errorBox = document.getElementById('errorBox');
+const resultsSection = document.getElementById('resultsSection');
+const emptyState = document.getElementById('emptyState');
+const nodeTooltip = document.getElementById('nodeTooltip');
+const nodeDetailPanel = document.getElementById('nodeDetailPanel');
+const nodeDetailContent = document.getElementById('nodeDetailContent');
 
-// Navigation Logic
-navItems.forEach(item => {
-    item.addEventListener('click', function () {
-        if (this.id === 'nav-dashboard' && currentAnalysis) {
-            switchView('dashboard');
-        } else if (this.id === 'nav-analysis') {
-            // Placeholder for future specialized graph view
-        }
-    });
-});
+let selectedFile = null;
 
-function switchView(viewName) {
-    if (viewName === 'dashboard') {
-        viewUpload.style.display = 'none';
-        viewDashboard.style.display = 'block';
-        pageTitle.textContent = 'Dashboard Overview';
-        document.getElementById('nav-dashboard').classList.add('active');
-        // Trigger graph resize
-        if (simulation) simulation.restart();
-    } else {
-        viewUpload.style.display = 'block';
-        viewDashboard.style.display = 'none';
-        pageTitle.textContent = 'Upload Dataset';
-    }
-}
-
-// File Upload Logic
+// ===== FILE UPLOAD =====
 dropZone.addEventListener('click', () => fileInput.click());
-
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
 });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  handleFileSelect(file);
 });
+fileInput.addEventListener('change', e => handleFileSelect(e.target.files[0]));
 
-fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length) handleFile(e.target.files[0]);
-});
-
-function handleFile(file) {
-    if (!file.name.endsWith('.csv')) {
-        showError('Invalid Format. Please upload .csv files only.');
-        return;
-    }
-
-    // Update UI State
-    document.querySelector('.upload-content').style.display = 'none';
-    const preview = document.getElementById('filePreview');
-    preview.style.display = 'flex';
-    document.getElementById('fileName').textContent = file.name;
-    document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
-
-    analyzeBtn.disabled = false;
-    analyzeBtn.onclick = () => runAnalysis(file);
-    errorBanner.style.display = 'none';
+function handleFileSelect(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showError('Please upload a .csv file. Other formats are not supported.');
+    return;
+  }
+  selectedFile = file;
+  fileInfo.innerHTML = `
+    <span class="file-icon">✓</span>
+    <span class="file-name">${file.name}</span>
+    <span class="file-size">${(file.size / 1024).toFixed(1)} KB</span>
+  `;
+  fileInfo.style.display = 'flex';
 }
 
-document.getElementById('removeFileBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.querySelector('.upload-content').style.display = 'block';
-    document.getElementById('filePreview').style.display = 'none';
+// ===== ANALYZE =====
+analyzeBtn.addEventListener('click', async () => {
+  if (!selectedFile) {
+    showError('Please select a CSV file first.');
+    return;
+  }
+
+  setLoading(true);
+
+  const formData = new FormData();
+  formData.append('csv_file', selectedFile);
+
+  try {
+    const response = await fetch('/analyze', { method: 'POST', body: formData });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Analysis failed');
+
+    currentAnalysis = data.analysis;
+    currentGraph = data.graph;
+    renderResults(data);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(false);
+  }
+});
+
+function renderResults(data) {
+  const { analysis, graph } = data;
+  emptyState.style.display = 'none';
+  resultsSection.style.display = 'block';
+  resultsSection.scrollIntoView({ behavior: 'smooth' });
+
+  renderSummaryStats(analysis.summary);
+  renderD3Graph(graph);
+  renderFraudRingsTable(analysis.fraud_rings);
+  accountsPage = 1;
+  renderAccountsTable(analysis.suspicious_accounts);
+  renderJsonPreview(analysis);
+}
+
+function renderSummaryStats(summary) {
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = '';
+  const cards = [
+    ['Total Accounts', summary.total_accounts_analyzed],
+    ['Flagged Accounts', summary.suspicious_accounts_flagged],
+    ['Fraud Rings', summary.fraud_rings_detected],
+    ['Processing Time', `${summary.processing_time_seconds}s`],
+  ];
+  cards.forEach(([title, value]) => {
+    const div = document.createElement('div');
+    div.className = 'card summary-card';
+    div.innerHTML = `<h4>${title}</h4><div class="value">${value}</div>`;
+    grid.appendChild(div);
+  });
+}
+
+// ===== D3 GRAPH =====
+function renderD3Graph(graphData) {
+  const container = document.getElementById('graphContainer');
+  container.innerHTML = '';
+  const width = container.clientWidth || 900;
+  const height = 600;
+
+  svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+  graphGroup = svg.append('g');
+
+  zoomBehavior = d3.zoom().scaleExtent([0.3, 5]).on('zoom', (event) => {
+    graphGroup.attr('transform', event.transform);
+    currentZoom = event.transform.k;
+  });
+  svg.call(zoomBehavior);
+
+  const defs = svg.append('defs');
+  ['normal', 'suspicious', 'fraud'].forEach(type => {
+    defs.append('marker')
+      .attr('id', `arrow-${type}`)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 18)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
+      .attr('fill', type === 'fraud' ? '#ff4757' : type === 'suspicious' ? '#ff6b35' : '#30363d');
+  });
+
+  linkSelection = graphGroup.append('g').selectAll('line')
+    .data(graphData.links)
+    .join('line')
+    .attr('stroke', d => d.type === 'fraud' ? '#ff475788' : d.type === 'suspicious' ? '#ff6b3588' : '#30363d')
+    .attr('stroke-width', d => d.type === 'fraud' ? 2.4 : d.type === 'suspicious' ? 1.7 : 1)
+    .attr('marker-end', d => `url(#arrow-${d.type})`);
+
+  nodeSelection = graphGroup.append('g').selectAll('circle')
+    .data(graphData.nodes)
+    .join('circle')
+    .attr('r', d => d.type === 'fraud' ? 12 : d.type === 'suspicious' ? 10 : 6)
+    .attr('fill', d => d.type === 'fraud' ? '#ff4757' : d.type === 'suspicious' ? '#ff6b35' : '#2dd4bf')
+    .attr('stroke', d => d.type === 'fraud' ? '#f0a500' : 'none')
+    .attr('stroke-width', d => d.type === 'fraud' ? 2 : 0)
+    .style('cursor', 'pointer')
+    .on('mouseover', showTooltip)
+    .on('mousemove', moveTooltip)
+    .on('mouseout', hideTooltip)
+    .on('click', showNodeDetail)
+    .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+
+  nodeSelection.filter(d => d.type === 'fraud').style('animation', 'fraud-pulse 1.5s ease-in-out infinite');
+
+  d3Simulation = d3.forceSimulation(graphData.nodes)
+    .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(80))
+    .force('charge', d3.forceManyBody().strength(-250))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => (d.type === 'fraud' ? 18 : 12)));
+
+  d3Simulation.on('tick', () => {
+    linkSelection
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+
+    nodeSelection.attr('cx', d => d.x).attr('cy', d => d.y);
+  });
+
+  bindGraphControls();
+
+  function dragstarted(event) {
+    if (!event.active) d3Simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
+  }
+  function dragged(event) {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
+  }
+  function dragended(event) {
+    if (!event.active) d3Simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
+  }
+}
+
+function bindGraphControls() {
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const resetViewBtn = document.getElementById('resetViewBtn');
+  const highlightFraudBtn = document.getElementById('highlightFraudBtn');
+  const showAllConnectionsBtn = document.getElementById('showAllConnectionsBtn');
+
+  zoomInBtn.onclick = () => svg.transition().duration(220).call(zoomBehavior.scaleBy, 1.2);
+  zoomOutBtn.onclick = () => svg.transition().duration(220).call(zoomBehavior.scaleBy, 0.85);
+  resetViewBtn.onclick = () => svg.transition().duration(220).call(zoomBehavior.transform, d3.zoomIdentity);
+
+  let fraudOnly = false;
+  highlightFraudBtn.onclick = () => {
+    fraudOnly = !fraudOnly;
+    highlightFraudBtn.classList.toggle('active', fraudOnly);
+    if (fraudOnly) {
+      nodeSelection.attr('opacity', d => d.type === 'fraud' ? 1 : 0.2);
+      linkSelection.attr('opacity', d => d.type === 'fraud' ? 1 : 0.08);
+    } else {
+      nodeSelection.attr('opacity', 1);
+      linkSelection.attr('opacity', 1);
+    }
+  };
+
+  let showAll = true;
+  showAllConnectionsBtn.onclick = () => {
+    showAll = !showAll;
+    showAllConnectionsBtn.classList.toggle('active', !showAll);
+    if (showAll) {
+      linkSelection.attr('display', 'inline');
+    } else {
+      linkSelection.attr('display', d => d.type === 'normal' ? 'none' : 'inline');
+    }
+  };
+}
+
+// ===== TOOLTIP =====
+function showTooltip(event, d) {
+  nodeTooltip.innerHTML = `
+    <div class="tooltip-id">${d.id}</div>
+    <div class="tooltip-risk">Risk Score: ${Number(d.risk_score || 0).toFixed(1)}</div>
+    <div class="tooltip-ring">Ring: ${d.ring_id || 'NONE'}</div>
+    <div class="tooltip-patterns">Patterns: ${(d.detected_patterns || []).join(', ') || 'none'}</div>
+    <div class="tooltip-stats">Sent: $${Number(d.total_sent || 0).toLocaleString()} | Received: $${Number(d.total_received || 0).toLocaleString()} | Txns: ${d.transaction_count || 0}</div>
+  `;
+  nodeTooltip.style.display = 'block';
+  moveTooltip(event);
+}
+
+function moveTooltip(event) {
+  nodeTooltip.style.left = `${event.pageX + 12}px`;
+  nodeTooltip.style.top = `${event.pageY + 12}px`;
+}
+
+function hideTooltip() {
+  nodeTooltip.style.display = 'none';
+}
+
+// ===== NODE DETAIL PANEL =====
+function showNodeDetail(event, d) {
+  selectedNode = d;
+  const score = Number(d.risk_score || 0);
+  const riskBadge = score >= 80 ? 'badge-high' : score >= 50 ? 'badge-mid' : 'badge-low';
+  const riskLabel = score >= 80 ? 'High Risk' : score >= 50 ? 'Moderate Risk' : 'Low Risk';
+  const patterns = (d.detected_patterns || []).map(p => `<span class="inline-pill pill-yellow">${p}</span>`).join('');
+
+  nodeDetailContent.innerHTML = `
+    <div class="detail-id">${d.id}</div>
+    <div class="badge ${riskBadge}">${riskLabel}</div>
+
+    <div class="muted" style="margin-top:10px;">Suspicion Score</div>
+    <div class="score-track"><div class="score-bar" style="--score-pct:${Math.max(0, Math.min(100, score))}%"></div></div>
+    <div>${score.toFixed(1)}</div>
+
+    <div class="muted" style="margin-top:10px;">Detected Patterns</div>
+    <div>${patterns || '<span class="muted">None</span>'}</div>
+
+    <div class="muted" style="margin-top:10px;">Ring Membership</div>
+    <div class="mono">${d.ring_id || 'NONE'}</div>
+
+    <div class="muted" style="margin-top:10px;">Transaction Stats</div>
+    <table>
+      <tr><td>Sent</td><td>$${Number(d.total_sent || 0).toLocaleString()}</td></tr>
+      <tr><td>Received</td><td>$${Number(d.total_received || 0).toLocaleString()}</td></tr>
+      <tr><td>Transaction Count</td><td>${d.transaction_count || 0}</td></tr>
+    </table>
+  `;
+
+  nodeDetailPanel.classList.add('open');
+}
+
+document.getElementById('closePanelBtn').addEventListener('click', () => {
+  nodeDetailPanel.classList.remove('open');
+});
+
+// ===== FRAUD RINGS TABLE =====
+function renderFraudRingsTable(rings) {
+  const tbody = document.getElementById('ringsTableBody');
+  tbody.innerHTML = '';
+
+  rings.forEach(ring => {
+    const tr = document.createElement('tr');
+    const typeClass = ring.pattern_type === 'cycle' ? 'pill-red' : ring.pattern_type === 'smurfing' ? 'pill-orange' : ring.pattern_type === 'shell' ? 'pill-yellow' : 'pill-mixed';
+    const riskColor = ring.risk_score >= 80 ? '#ff4757' : ring.risk_score >= 50 ? '#ff6b35' : '#f0a500';
+
+    const preview = ring.member_accounts.slice(0, 3).map(id => `<span class="mono link-inline" data-account="${id}">${id}</span>`).join(', ');
+    const extra = ring.member_accounts.length > 3 ? `<span class="link-inline show-more" data-members="${ring.member_accounts.join('|')}">+${ring.member_accounts.length - 3} more</span>` : '';
+
+    tr.innerHTML = `
+      <td class="mono ring-id">${ring.ring_id}</td>
+      <td><span class="inline-pill ${typeClass}">${ring.pattern_type}</span></td>
+      <td class="member-count">${ring.member_accounts.length}</td>
+      <td style="color:${riskColor};font-weight:700;">${Number(ring.risk_score).toFixed(1)}</td>
+      <td>${preview} ${extra}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.show-more').forEach(el => {
+    el.addEventListener('click', () => {
+      const all = el.getAttribute('data-members').split('|');
+      el.parentElement.innerHTML = all.map(id => `<span class="mono link-inline" data-account="${id}">${id}</span>`).join(', ');
+      bindAccountLinks();
+    });
+  });
+
+  bindAccountLinks();
+}
+
+function bindAccountLinks() {
+  document.querySelectorAll('[data-account]').forEach(el => {
+    el.addEventListener('click', () => highlightNode(el.getAttribute('data-account')));
+  });
+}
+
+document.getElementById('exportTableCsvBtn').addEventListener('click', () => {
+  if (!currentAnalysis) return;
+  const rows = [['ring_id', 'pattern_type', 'member_count', 'risk_score', 'member_accounts']];
+  currentAnalysis.fraud_rings.forEach(r => rows.push([r.ring_id, r.pattern_type, r.member_accounts.length, r.risk_score, r.member_accounts.join(';')]));
+  downloadCsv(rows, 'fraud_rings.csv');
+});
+
+// ===== SUSPICIOUS ACCOUNTS TABLE =====
+function renderAccountsTable(accounts) {
+  const query = document.getElementById('accountSearch').value.trim().toLowerCase();
+  const filtered = accounts.filter(acc => {
+    if (!query) return true;
+    return acc.account_id.toLowerCase().includes(query)
+      || acc.ring_id.toLowerCase().includes(query)
+      || acc.detected_patterns.some(p => p.toLowerCase().includes(query));
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (accountsPage > totalPages) accountsPage = totalPages;
+  const start = (accountsPage - 1) * PAGE_SIZE;
+  const pageRows = filtered.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById('suspiciousAccountsTable');
+  tbody.innerHTML = '';
+  pageRows.forEach((acc, idx) => {
+    const tr = document.createElement('tr');
+    const rank = start + idx + 1;
+    const inRing = acc.ring_id !== 'NONE';
+    const patternHtml = acc.detected_patterns.map(p => `<span class="inline-pill ${patternClass(p)}">${p}</span>`).join('');
+
+    tr.innerHTML = `
+      <td>${rank}</td>
+      <td class="mono" style="color:${inRing ? '#f0a500' : '#e6edf3'}">${acc.account_id}</td>
+      <td>
+        <div class="score-track"><div class="score-bar" style="--score-pct:${Math.max(0, Math.min(100, acc.suspicion_score))}%"></div></div>
+        <div>${Number(acc.suspicion_score).toFixed(1)}</div>
+      </td>
+      <td>${acc.ring_id !== 'NONE' ? `<span class="inline-pill pill-red link-inline" data-ring="${acc.ring_id}">${acc.ring_id}</span>` : '-'}</td>
+      <td>${patternHtml}</td>
+      <td><button class="pill-btn" data-highlight="${acc.account_id}">Highlight in Graph</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('pageInfo').textContent = `Page ${accountsPage} / ${totalPages}`;
+  document.getElementById('prevPageBtn').disabled = accountsPage === 1;
+  document.getElementById('nextPageBtn').disabled = accountsPage === totalPages;
+
+  tbody.querySelectorAll('[data-highlight]').forEach(btn => {
+    btn.addEventListener('click', () => highlightNode(btn.getAttribute('data-highlight')));
+  });
+
+  tbody.querySelectorAll('[data-ring]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ringId = btn.getAttribute('data-ring');
+      const member = currentAnalysis.fraud_rings.find(r => r.ring_id === ringId)?.member_accounts?.[0];
+      if (member) highlightNode(member);
+    });
+  });
+}
+
+function patternClass(pattern) {
+  if (pattern.startsWith('cycle_length')) return 'pill-red';
+  if (pattern.startsWith('fan_in') || pattern.startsWith('fan_out')) return 'pill-orange';
+  if (pattern === 'high_velocity') return 'pill-yellow';
+  if (pattern === 'shell_chain') return 'pill-mixed';
+  return 'pill-yellow';
+}
+
+document.getElementById('accountSearch').addEventListener('input', () => {
+  accountsPage = 1;
+  if (currentAnalysis) renderAccountsTable(currentAnalysis.suspicious_accounts);
+});
+
+document.getElementById('prevPageBtn').addEventListener('click', () => {
+  if (accountsPage > 1) accountsPage -= 1;
+  renderAccountsTable(currentAnalysis.suspicious_accounts);
+});
+
+document.getElementById('nextPageBtn').addEventListener('click', () => {
+  accountsPage += 1;
+  renderAccountsTable(currentAnalysis.suspicious_accounts);
+});
+
+function highlightNode(accountId) {
+  if (!nodeSelection) return;
+  nodeSelection.attr('opacity', d => d.id === accountId ? 1 : 0.2);
+  linkSelection.attr('opacity', d => d.source.id === accountId || d.target.id === accountId ? 1 : 0.08);
+  const found = currentGraph.nodes.find(n => n.id === accountId);
+  if (found) showNodeDetail(null, found);
+  document.getElementById('graphContainer').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== EXPORTS =====
+document.getElementById('downloadJsonBtn').addEventListener('click', () => {
+  if (!currentAnalysis) return;
+  const blob = new Blob([JSON.stringify(currentAnalysis, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'forensics_report.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('copyJsonBtn').addEventListener('click', async () => {
+  if (!currentAnalysis) return;
+  const btn = document.getElementById('copyJsonBtn');
+  await navigator.clipboard.writeText(JSON.stringify(currentAnalysis, null, 2));
+  btn.textContent = '✓ Copied!';
+  setTimeout(() => { btn.textContent = '📋 Copy JSON to Clipboard'; }, 2000);
+});
+
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  if (!currentAnalysis) return;
+  const rows = [['account_id', 'suspicion_score', 'ring_id', 'detected_patterns']];
+  currentAnalysis.suspicious_accounts.forEach(a => {
+    rows.push([a.account_id, a.suspicion_score, a.ring_id, a.detected_patterns.join(';')]);
+  });
+  downloadCsv(rows, 'suspicious_accounts.csv');
+});
+
+function downloadCsv(rows, filename) {
+  const csv = rows.map(r => r.map(v => {
+    const s = String(v);
+    return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===== JSON PREVIEW =====
+function renderJsonPreview(data) {
+  const pre = document.getElementById('jsonPreview');
+  const raw = JSON.stringify(data, null, 2)
+    .replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span class="json-number">$1</span>');
+  pre.innerHTML = raw;
+}
+
+document.getElementById('togglePreviewBtn').addEventListener('click', () => {
+  const pre = document.getElementById('jsonPreview');
+  const btn = document.getElementById('togglePreviewBtn');
+  const open = pre.style.display === 'block';
+  pre.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? 'Preview JSON Output ▼' : 'Preview JSON Output ▲';
+});
+
+// ===== LOADING =====
+function setLoading(loading) {
+  if (loading) {
     analyzeBtn.disabled = true;
-    fileInput.value = '';
-});
-
-function showError(msg) {
-    errorBanner.style.display = 'flex';
-    document.getElementById('errorText').textContent = msg;
+    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing transactions...';
+  } else {
+    analyzeBtn.disabled = false;
+    analyzeBtn.innerHTML = 'Analyze for Fraud Rings →';
+  }
 }
 
-// Analysis Loop
-async function runAnalysis(file) {
-    const btn = analyzeBtn;
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span> Processing...`;
-
-    const formData = new FormData();
-    formData.append('csv_file', file);
-
-    try {
-        const response = await fetch('/analyze', { method: 'POST', body: formData });
-        const data = await response.json();
-
-        if (!response.ok) throw new Error(data.error || 'Server Error');
-
-        currentAnalysis = data;
-        renderDashboard(data);
-        switchView('dashboard');
-
-    } catch (err) {
-        showError(err.message);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
-}
-
-// --- DASHBOARD RENDERERS ---
-function renderDashboard(data) {
-    const { analysis, graph } = data;
-
-    // 1. KPIs
-    const statsContainer = document.getElementById('summaryStats');
-    statsContainer.innerHTML = `
-        <div class="kpi-card">
-            <span class="kpi-label">Risk Score</span>
-            <span class="kpi-value" style="color:var(--color-risk-high)">${calculateAvgRisk(analysis.suspicious_accounts)}%</span>
-        </div>
-        <div class="kpi-card">
-            <span class="kpi-label">Fraud Rings</span>
-            <span class="kpi-value">${analysis.fraud_rings.length}</span>
-        </div>
-        <div class="kpi-card">
-            <span class="kpi-label">Flagged Accounts</span>
-            <span class="kpi-value">${analysis.suspicious_accounts.length}</span>
-        </div>
-        <div class="kpi-card">
-            <span class="kpi-label">Processing Time</span>
-            <span class="kpi-value">${analysis.summary.processing_time_seconds}s</span>
-        </div>
-    `;
-
-    // 2. Graph
-    initD3Graph(graph);
-
-    // 3. Lists
-    renderSuspiciousList(analysis.suspicious_accounts);
-
-    // 4. Tables
-    renderFraudRings(analysis.fraud_rings);
-}
-
-function calculateAvgRisk(accounts) {
-    if (!accounts.length) return 0;
-    const sum = accounts.reduce((acc, curr) => acc + curr.suspicion_score, 0);
-    return (sum / accounts.length).toFixed(1);
-}
-
-function renderSuspiciousList(accounts) {
-    const list = document.getElementById('suspiciousList');
-    list.innerHTML = '';
-
-    accounts.slice(0, 50).forEach(acc => {
-        const item = document.createElement('div');
-        item.className = 'list-item';
-        const riskClass = acc.suspicion_score > 80 ? 'high' : 'med';
-
-        item.innerHTML = `
-            <span class="acct-id">${acc.account_id}</span>
-            <span class="risk-tag ${riskClass}">Risk: ${acc.suspicion_score}</span>
-        `;
-        item.onclick = () => showAccountDetails(acc);
-        list.appendChild(item);
-    });
-}
-
-function renderFraudRings(rings) {
-    const tbody = document.getElementById('ringsTableBody');
-    tbody.innerHTML = '';
-
-    rings.forEach(ring => {
-        const row = document.createElement('tr');
-        const patternClass = ring.pattern_type === 'cycle' ? 'pill cycle'
-            : ring.pattern_type === 'smurfing' ? 'pill smurf' : 'pill shell';
-
-        row.innerHTML = `
-            <td style="font-family:var(--font-mono); color:var(--color-accent);">${ring.ring_id}</td>
-            <td><span class="${patternClass}">${ring.pattern_type}</span></td>
-            <td>${ring.member_accounts.length} Nodes</td>
-            <td style="font-weight:bold; color:${ring.risk_score > 80 ? 'var(--color-risk-high)' : 'var(--color-risk-med)'}">${ring.risk_score}</td>
-            <td style="font-size:0.85rem; color:var(--color-text-tertiary); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                ${ring.member_accounts.join(', ')}
-            </td>
-            <td>Active</td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
-function showAccountDetails(acc) {
-    const content = document.getElementById('detailContent');
-    const empty = document.querySelector('.empty-state-panel');
-
-    empty.style.display = 'none';
-    content.style.display = 'block';
-
-    content.innerHTML = `
-        <div style="border-bottom:1px solid var(--color-border); padding-bottom:1rem; margin-bottom:1rem;">
-            <h4 style="font-family:var(--font-mono); font-size:1.2rem; margin-bottom:0.5rem; color:#fff;">${acc.account_id}</h4>
-            <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
-                <span>Suspicion Score:</span>
-                <span style="color:${acc.suspicion_score > 80 ? 'var(--color-risk-high)' : 'var(--color-risk-med)'}; font-weight:bold;">${acc.suspicion_score}</span>
-            </div>
-        </div>
-        
-        <div style="margin-bottom:1rem;">
-            <h5 style="color:var(--color-text-secondary); margin-bottom:0.5rem;">Detected Patterns</h5>
-            <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                ${acc.detected_patterns.map(p => `<span class="risk-tag high">${p}</span>`).join('')}
-            </div>
-        </div>
-        
-        <div>
-            <h5 style="color:var(--color-text-secondary); margin-bottom:0.5rem;">Ring Membership</h5>
-            <div style="font-family:var(--font-mono); color:var(--color-accent); font-weight:500;">
-                ${acc.ring_id !== 'NONE' ? acc.ring_id : 'No Ring Association'}
-            </div>
-        </div>
-    `;
-}
-
-// --- D3.js Implementation ---
-function initD3Graph(graphData) {
-    const container = document.getElementById('graphContainer');
-    container.innerHTML = ''; // Clear
-
-    const width = container.clientWidth;
-    const height = container.clientHeight || 600;
-
-    // Zoom behavior
-    const zoom = d3.zoom()
-        .scaleExtent([0.1, 4])
-        .on('zoom', (event) => {
-            currentZoom = event.transform;
-            g.attr('transform', event.transform);
-        });
-
-    const svg = d3.select(container).append('svg')
-        .attr('width', '100%')
-        .attr('height', '100%')
-        .attr('viewBox', [0, 0, width, height])
-        .call(zoom)
-        .on('dblclick.zoom', null); // Disable double click zoom
-
-    // Define Grid Pattern for Background
-    const defs = svg.append('defs');
-    const pattern = defs.append('pattern')
-        .attr('id', 'grid')
-        .attr('width', 40)
-        .attr('height', 40)
-        .attr('patternUnits', 'userSpaceOnUse');
-    pattern.append('path')
-        .attr('d', 'M 40 0 L 0 0 0 40')
-        .attr('fill', 'none')
-        .attr('stroke', 'rgba(255,255,255,0.03)')
-        .attr('stroke-width', 1);
-
-    svg.append('rect')
-        .attr('width', '100%')
-        .attr('height', '100%')
-        .attr('fill', 'url(#grid)');
-
-    const g = svg.append('g');
-
-    // Simulation Setup
-    simulation = d3.forceSimulation(graphData.nodes)
-        .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(60))
-        .force('charge', d3.forceManyBody().strength(-150))
-        .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collide', d3.forceCollide(20));
-
-    // Links
-    const link = g.append('g')
-        .selectAll('line')
-        .data(graphData.links)
-        .join('line')
-        .attr('stroke', d => d.type === 'fraud' ? 'var(--color-risk-high)' : d.type === 'suspicious' ? 'var(--color-risk-med)' : '#30363d')
-        .attr('stroke-opacity', 0.4)
-        .attr('stroke-width', d => d.type === 'fraud' ? 2 : 1);
-
-    // Nodes
-    const node = g.append('g')
-        .selectAll('circle')
-        .data(graphData.nodes)
-        .join('circle')
-        .attr('r', d => d.type === 'fraud' ? 8 : d.type === 'suspicious' ? 6 : 4)
-        .attr('fill', d => {
-            if (d.type === 'fraud') return 'var(--color-risk-high)';
-            if (d.type === 'suspicious') return 'var(--color-risk-med)';
-            return '#4b5563';
-        })
-        .attr('stroke', '#161b22')
-        .attr('stroke-width', 1.5)
-        .call(d3.drag()
-            .on('start', dragstarted)
-            .on('drag', dragged)
-            .on('end', dragended));
-
-    // Node Interactions
-    const tooltip = document.getElementById('nodeTooltip');
-
-    node.on('mouseover', (event, d) => {
-        const [x, y] = d3.pointer(event, document.body);
-        tooltip.style.display = 'block';
-        tooltip.style.left = (x + 15) + 'px';
-        tooltip.style.top = (y - 10) + 'px';
-
-        let ringHtml = d.ring_id ? `<div class="tip-row"><span>Ring ID:</span> <span style="color:var(--color-accent)">${d.ring_id}</span></div>` : '';
-
-        tooltip.innerHTML = `
-            <div class="tip-header">
-                <span class="tip-id">${d.id}</span>
-                <span class="tip-score">${d.risk_score || 0}</span>
-            </div>
-            ${ringHtml}
-            <div class="tip-row"><span>Transactions:</span> <span>${d.transaction_count}</span></div>
-            <div class="tip-row"><span>Type:</span> <span style="color:${d.type === 'fraud' ? 'var(--color-risk-high)' : '#fff'}">${d.type.toUpperCase()}</span></div>
-        `;
-
-        // Highlight neighbors
-        link.attr('stroke-opacity', l => (l.source === d || l.target === d) ? 1 : 0.1);
-        node.attr('opacity', n => {
-            const isNeighbor = graphData.links.some(l =>
-                (l.source === d && l.target === n) || (l.target === d && l.source === n)
-            );
-            return (n === d || isNeighbor) ? 1 : 0.2;
-        });
-    })
-        .on('mouseout', () => {
-            tooltip.style.display = 'none';
-            link.attr('stroke-opacity', 0.4);
-            node.attr('opacity', 1);
-        })
-        .on('click', (event, d) => {
-            showAccountDetails(d);
-        });
-
-    simulation.on('tick', () => {
-        link
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
-
-        node
-            .attr('cx', d => d.x)
-            .attr('cy', d => d.y);
-    });
-
-    function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-    }
-
-    function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-    }
-
-    function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-    }
-
-    // Controls Logic
-    document.getElementById('zoomInBtn').onclick = () => svg.transition().call(zoom.scaleBy, 1.3);
-    document.getElementById('zoomOutBtn').onclick = () => svg.transition().call(zoom.scaleBy, 0.7);
-    document.getElementById('resetViewBtn').onclick = () => svg.transition().call(zoom.transform, d3.zoomIdentity);
-
-    let highlightMode = false;
-    document.getElementById('highlightFraudBtn').onclick = function () {
-        highlightMode = !highlightMode;
-        this.classList.toggle('active');
-
-        if (highlightMode) {
-            node.attr('opacity', d => d.type === 'fraud' ? 1 : 0.1);
-            link.attr('stroke-opacity', d => d.type === 'fraud' ? 1 : 0.05);
-        } else {
-            node.attr('opacity', 1);
-            link.attr('stroke-opacity', 0.4);
-        }
-    };
+// ===== ERROR DISPLAY =====
+function showError(message) {
+  errorBox.innerHTML = `
+    <span class="error-icon">⚠️</span>
+    <div>
+      <div class="error-title" style="font-family: 'Fraunces', serif;">Something went wrong</div>
+      <div class="error-message">${message}</div>
+      ${message.toLowerCase().includes('column') ? '<div class="error-hint">Tip: Rename CSV columns to: sender_id, receiver_id, amount, timestamp</div>' : ''}
+    </div>
+  `;
+  errorBox.style.display = 'flex';
 }
