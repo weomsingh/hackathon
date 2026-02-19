@@ -14,19 +14,24 @@ const uploadView = document.getElementById('view-upload');
 const dashView = document.getElementById('view-dashboard');
 
 // === 1. File Upload Handling ===
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
-dropZone.addEventListener('dragleave', e => { dropZone.style.borderColor = 'var(--border)'; });
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.style.borderColor = 'var(--border)';
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
-});
-fileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (file) handleFile(file);
-});
+if (dropZone) {
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
+  dropZone.addEventListener('dragleave', e => { dropZone.style.borderColor = 'var(--border)'; });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--border)';
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+}
+
+if (fileInput) {
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  });
+}
 
 function handleFile(file) {
   if (!file.name.endsWith('.csv')) {
@@ -41,16 +46,20 @@ function handleFile(file) {
         <h3>${file.name}</h3>
         <p style="font-size:0.9rem; color:var(--text-secondary)">${(file.size / 1024).toFixed(1)} KB</p>
     `;
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 
-  analyzeBtn.disabled = false;
-  analyzeBtn.onclick = () => processCSV(file);
+  if (analyzeBtn) {
+    analyzeBtn.disabled = false;
+    analyzeBtn.onclick = () => processCSV(file);
+  }
 }
 
 // === 2. Client-Side Processing (Core Engine) ===
 function processCSV(file) {
-  analyzeBtn.disabled = true;
-  analyzeBtn.innerHTML = `<span class="spinner"></span> Analyzing...`;
+  if (analyzeBtn) {
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = `<span class="spinner"></span> Analyzing...`;
+  }
 
   const startTime = performance.now();
 
@@ -60,30 +69,45 @@ function processCSV(file) {
     skipEmptyLines: true,
     complete: function (results) {
       try {
+        if (!results.data || results.data.length === 0) {
+          throw new Error("CSV file is empty or invalid.");
+        }
+
         const engine = new FraudEngine(results.data);
         const analysis = engine.runAnalysis();
 
         const processingTime = ((performance.now() - startTime) / 1000).toFixed(2);
-        if (!analysis.summary) analysis.summary = {}; // Safety check
-        analysis.summary.processing_time_seconds = processingTime;
+
+        // Ensure summary object exists
+        if (!analysis.analysis.summary) {
+          analysis.analysis.summary = {};
+        }
+        analysis.analysis.summary.processing_time_seconds = processingTime;
 
         renderDashboard(analysis);
 
         // Switch View
-        uploadView.classList.remove('active');
-        dashView.classList.add('active');
-        document.getElementById('nav-dash').classList.add('active');
+        if (uploadView) uploadView.classList.remove('active');
+        if (dashView) dashView.classList.add('active');
+        const navDash = document.getElementById('nav-dash');
+        if (navDash) navDash.classList.add('active');
 
       } catch (err) {
+        console.error(err);
         alert("Error analyzing file: " + err.message);
-        analyzeBtn.disabled = false;
-        analyzeBtn.textContent = 'Analyze for Fraud Rings →';
+        if (analyzeBtn) {
+          analyzeBtn.disabled = false;
+          analyzeBtn.textContent = 'Analyze for Fraud Rings →';
+        }
       }
     },
     error: function (err) {
+      console.error(err);
       alert("CSV Parse Error: " + err.message);
-      analyzeBtn.disabled = false;
-      analyzeBtn.textContent = 'Analyze for Fraud Rings →';
+      if (analyzeBtn) {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Analyze for Fraud Rings →';
+      }
     }
   });
 }
@@ -99,32 +123,39 @@ class FraudEngine {
 
     this.suspicious = [];
     this.rings = [];
-    this.patterns = new Map(); // id -> Set(patterns)
+    // patterns is now a property of individual nodes, initialized in _initNode
 
     this._buildGraph();
   }
 
   _buildGraph() {
     this.txs.forEach(tx => {
-      const src = String(tx.sender_id || tx.Sender_ID || '').trim();
-      const dst = String(tx.receiver_id || tx.Receiver_ID || '').trim();
-      const amt = parseFloat(tx.amount || tx.Amount || 0);
-      const time = new Date(tx.timestamp || tx.Timestamp);
+      // Flexible column matching
+      const src = String(tx.sender_id || tx.Sender_ID || tx.Sender || '').trim();
+      const dst = String(tx.receiver_id || tx.Receiver_ID || tx.Receiver || '').trim();
+      let amt = parseFloat(tx.amount || tx.Amount || 0);
+      if (isNaN(amt)) amt = 0;
 
-      if (!src || !dst) return;
+      let timeStr = tx.timestamp || tx.Timestamp || tx.Time;
+      let time = new Date();
+      if (timeStr) time = new Date(timeStr);
+
+      if (!src || !dst) return; // Skip invalid rows
 
       // Add Nodes
       if (!this.nodes.has(src)) this._initNode(src);
       if (!this.nodes.has(dst)) this._initNode(dst);
 
       // Update Stats
-      this.nodes.get(src).sent += amt;
-      this.nodes.get(src).count++;
-      this.nodes.get(src).timestamps.push(time);
+      const srcNode = this.nodes.get(src);
+      srcNode.sent += amt;
+      srcNode.count++;
+      srcNode.timestamps.push(time);
 
-      this.nodes.get(dst).received += amt;
-      this.nodes.get(dst).count++;
-      this.nodes.get(dst).timestamps.push(time);
+      const dstNode = this.nodes.get(dst);
+      dstNode.received += amt;
+      dstNode.count++;
+      dstNode.timestamps.push(time);
 
       // Edges
       if (!this.adj.has(src)) this.adj.set(src, []);
@@ -164,6 +195,8 @@ class FraudEngine {
       ring_id: n.ring_id
     }));
 
+    // Map links to objects or IDs depending on what d3 expects (d3 modifies objects in place)
+    // We return plain objects here
     const d3Links = this.links.map(l => ({
       source: l.source,
       target: l.target,
@@ -206,7 +239,7 @@ class FraudEngine {
       }
     };
 
-    // Limit to first 1000 candidates for performance
+    // Limit to first 1000 candidates for performance to prevent browser freeze
     candidates.slice(0, 1000).forEach(node => dfs(node, node, [node], 1));
     return cycles;
   }
@@ -234,6 +267,7 @@ class FraudEngine {
 
   _checkTimeWindow(timestamps, count, hours) {
     if (timestamps.length < count) return false;
+    // Sort in place is fine here as we don't reuse original order
     timestamps.sort((a, b) => a - b);
 
     for (let i = 0; i <= timestamps.length - count; i++) {
@@ -256,20 +290,25 @@ class FraudEngine {
     const visited = new Set();
 
     weakNodes.forEach(startNode => {
+      // visited check logic needs to be careful not to skip valid paths,
+      // but for simple shell finding, ensuring we don't re-start from same node is good.
       if (visited.has(startNode)) return;
 
       // Trace chain
       let chain = [startNode];
       let curr = startNode;
+      let pathVisited = new Set([startNode]);
 
-      // Only look forward for now
+      // Only look forward
       while (true) {
         const neighbors = this.adj.get(curr) || [];
-        const nextWeak = neighbors.find(n => weakNodes.has(n) && !chain.includes(n));
+        // Find a neighbor that is also a weak node and not already in this chain
+        const nextWeak = neighbors.find(n => weakNodes.has(n) && !pathVisited.has(n));
 
         if (nextWeak) {
           chain.push(nextWeak);
           visited.add(nextWeak);
+          pathVisited.add(nextWeak);
           curr = nextWeak;
         } else {
           break;
@@ -308,10 +347,12 @@ class FraudEngine {
         ring_id: rid, pattern_type: type, member_accounts: members, risk_score: score
       });
       members.forEach(m => {
-        const n = this.nodes.get(m);
-        n.ring_id = rid;
-        n.patterns.add(type);
-        n.score += (type === 'cycle' ? 50 : type === 'smurfing' ? 30 : 20);
+        if (this.nodes.has(m)) {
+          const n = this.nodes.get(m);
+          n.ring_id = rid;
+          n.patterns.add(type);
+          n.score += (type === 'cycle' ? 50 : type === 'smurfing' ? 30 : 20);
+        }
       });
     };
 
@@ -325,6 +366,7 @@ class FraudEngine {
     });
 
     shells.forEach(chain => {
+      // If any node in chain is already in a cycle, skip to avoid noise
       if (chain.some(n => this.nodes.get(n).patterns.has('cycle'))) return;
       addRing(chain, 'shell', 60);
     });
@@ -370,57 +412,74 @@ function renderDashboard(data) {
   const { analysis, graph } = data;
 
   // KPIs
-  document.getElementById('kpi-risk').textContent = calculateAvgRisk(analysis.suspicious_accounts) + '%';
-  document.getElementById('kpi-rings').textContent = analysis.fraud_rings.length;
-  document.getElementById('kpi-flagged').textContent = analysis.suspicious_accounts.length;
-  document.getElementById('kpi-time').textContent = analysis.summary.processing_time_seconds + 's';
+  const kpiRisk = document.getElementById('kpi-risk');
+  if (kpiRisk) kpiRisk.textContent = calculateAvgRisk(analysis.suspicious_accounts) + '%';
+
+  const kpiRings = document.getElementById('kpi-rings');
+  if (kpiRings) kpiRings.textContent = analysis.fraud_rings.length;
+
+  const kpiFlagged = document.getElementById('kpi-flagged');
+  if (kpiFlagged) kpiFlagged.textContent = analysis.suspicious_accounts.length;
+
+  const kpiTime = document.getElementById('kpi-time');
+  if (kpiTime) {
+    const timeVal = analysis.analysis?.summary?.processing_time_seconds || analysis.summary?.processing_time_seconds || 0;
+    kpiTime.textContent = timeVal + 's';
+  }
 
   // Graph
   initGraph(graph);
 
   // List
   const list = document.getElementById('suspiciousList');
-  list.innerHTML = '';
-  analysis.suspicious_accounts.slice(0, 50).forEach(acc => {
-    const div = document.createElement('div');
-    div.className = 'list-item';
-    div.innerHTML = `
-            <span style="font-family:var(--font-mono)">${acc.account_id}</span>
-            <span class="risk-tag ${acc.suspicion_score > 80 ? 'high' : 'med'}">${acc.suspicion_score}%</span>
-        `;
-    div.onclick = () => highlightNode(acc.account_id);
-    list.appendChild(div);
-  });
+  if (list) {
+    list.innerHTML = '';
+    analysis.suspicious_accounts.slice(0, 50).forEach(acc => {
+      const div = document.createElement('div');
+      div.className = 'list-item';
+      div.innerHTML = `
+                <span style="font-family:var(--font-mono)">${acc.account_id}</span>
+                <span class="risk-tag ${acc.suspicion_score > 80 ? 'high' : 'med'}">${acc.suspicion_score}%</span>
+            `;
+      div.onclick = () => highlightNode(acc.account_id);
+      list.appendChild(div);
+    });
+  }
 
   // Table
   const tbody = document.getElementById('ringsTableBody');
-  tbody.innerHTML = '';
-  analysis.fraud_rings.forEach(ring => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-            <td style="font-family:var(--font-mono); color:var(--accent)">${ring.ring_id}</td>
-            <td><span class="risk-tag ${ring.risk_score > 80 ? 'high' : 'med'}">${ring.pattern_type}</span></td>
-            <td>${ring.member_accounts.length}</td>
-            <td style="font-weight:bold">${ring.risk_score}</td>
-        `;
-    tbody.appendChild(tr);
-  });
+  if (tbody) {
+    tbody.innerHTML = '';
+    analysis.fraud_rings.forEach(ring => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+                <td style="font-family:var(--font-mono); color:var(--accent)">${ring.ring_id}</td>
+                <td><span class="risk-tag ${ring.risk_score > 80 ? 'high' : 'med'}">${ring.pattern_type}</span></td>
+                <td>${ring.member_accounts.length}</td>
+                <td style="font-weight:bold">${ring.risk_score}</td>
+            `;
+      tbody.appendChild(tr);
+    });
+  }
 }
 
 function calculateAvgRisk(accounts) {
-  if (!accounts.length) return 0;
+  if (!accounts || !accounts.length) return 0;
   return (accounts.reduce((a, b) => a + b.suspicion_score, 0) / accounts.length).toFixed(1);
 }
 
 // D3 Graph Initialization
 function initGraph(data) {
   const container = document.getElementById('graphContainer');
+  if (!container) return;
+
   container.innerHTML = '';
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  const width = container.clientWidth || 800;
+  const height = container.clientHeight || 600;
 
   const svg = d3.select(container).append('svg')
     .attr('width', '100%').attr('height', '100%')
+    .attr('viewBox', [0, 0, width, height])
     .call(d3.zoom().on('zoom', (e) => g.attr('transform', e.transform)));
 
   const g = svg.append('g');
@@ -449,27 +508,30 @@ function initGraph(data) {
 
   // Tooltip
   const tooltip = document.getElementById('tooltip');
-  node.on('mouseover', (e, d) => {
-    tooltip.style.display = 'block';
-    tooltip.style.left = (e.pageX + 10) + 'px';
-    tooltip.style.top = (e.pageY + 10) + 'px';
-    tooltip.innerHTML = `
-            <div style="font-weight:bold; color:var(--text-primary); margin-bottom:6px">${d.id}</div>
-            <div class="tip-row"><span>Risk Score</span> <span class="tip-val" style="color:${d.risk_score > 80 ? 'var(--risk-high)' : 'var(--risk-med)'}">${d.risk_score || 0}</span></div>
-            <div class="tip-row"><span>Type</span> <span class="tip-val">${d.type}</span></div>
-            ${d.ring_id ? `<div class="tip-row"><span>Ring ID</span> <span class="tip-val" style="color:var(--accent)">${d.ring_id}</span></div>` : ''}
-        `;
 
-    link.attr('stroke-opacity', l => (l.source === d || l.target === d) ? 1 : 0.1);
-    node.attr('opacity', n => {
-      const isNeighbor = data.links.some(l => (l.source === d && l.target === n) || (l.target === d && l.source === n));
-      return (n === d || isNeighbor) ? 1 : 0.2;
+  if (tooltip) {
+    node.on('mouseover', (e, d) => {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.pageX + 10) + 'px';
+      tooltip.style.top = (e.pageY + 10) + 'px';
+      tooltip.innerHTML = `
+                <div style="font-weight:bold; color:var(--text-primary); margin-bottom:6px">${d.id}</div>
+                <div class="tip-row"><span>Risk Score</span> <span class="tip-val" style="color:${d.risk_score > 80 ? 'var(--risk-high)' : 'var(--risk-med)'}">${d.risk_score || 0}</span></div>
+                <div class="tip-row"><span>Type</span> <span class="tip-val">${d.type}</span></div>
+                ${d.ring_id ? `<div class="tip-row"><span>Ring ID</span> <span class="tip-val" style="color:var(--accent)">${d.ring_id}</span></div>` : ''}
+            `;
+
+      link.attr('stroke-opacity', l => (l.source === d || l.target === d) ? 1 : 0.1);
+      node.attr('opacity', n => {
+        const isNeighbor = data.links.some(l => (l.source === d && l.target === n) || (l.target === d && l.source === n));
+        return (n === d || isNeighbor) ? 1 : 0.2;
+      });
+    }).on('mouseout', () => {
+      tooltip.style.display = 'none';
+      link.attr('stroke-opacity', 0.5);
+      node.attr('opacity', 1);
     });
-  }).on('mouseout', () => {
-    tooltip.style.display = 'none';
-    link.attr('stroke-opacity', 0.5);
-    node.attr('opacity', 1);
-  });
+  }
 
   simulation.on('tick', () => {
     link.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
@@ -477,9 +539,14 @@ function initGraph(data) {
   });
 
   // Zoom Controls
-  document.getElementById('zoomIn').onclick = () => svg.transition().call(d3.zoom().scaleBy, 1.2);
-  document.getElementById('zoomOut').onclick = () => svg.transition().call(d3.zoom().scaleBy, 0.8);
-  document.getElementById('fitView').onclick = () => svg.transition().call(d3.zoom().transform, d3.zoomIdentity);
+  const zoomIn = document.getElementById('zoomIn');
+  if (zoomIn) zoomIn.onclick = () => svg.transition().call(d3.zoom().scaleBy, 1.2);
+
+  const zoomOut = document.getElementById('zoomOut');
+  if (zoomOut) zoomOut.onclick = () => svg.transition().call(d3.zoom().scaleBy, 0.8);
+
+  const fitView = document.getElementById('fitView');
+  if (fitView) fitView.onclick = () => svg.transition().call(d3.zoom().transform, d3.zoomIdentity);
 
   function dragstart(e) { if (!e.active) simulation.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; }
   function dragged(e) { e.subject.fx = e.x; e.subject.fy = e.y; }
@@ -487,6 +554,5 @@ function initGraph(data) {
 }
 
 function highlightNode(id) {
-  // Basic highlight effect?
-  // Could find node in D3 data and zoom to it
+  // Basic highlight placeholder
 }
