@@ -16,7 +16,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="static/style.css">
@@ -76,9 +75,75 @@
 
         <!-- Tooltip -->
         <div id="tooltip" class="tooltip"></div>
+
+        <!-- Dashboard View (Initially Hidden) -->
+        <section id="view-dashboard" class="view-section">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-label">Avg Risk Score</span>
+                    <span class="kpi-value" style="color:var(--risk-high)" id="kpi-risk">0%</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Fraud Rings</span>
+                    <span class="kpi-value" id="kpi-rings">0</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Flagged Accounts</span>
+                    <span class="kpi-value" id="kpi-flagged">0</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Processing Time</span>
+                    <span class="kpi-value" id="kpi-time">0s</span>
+                </div>
+            </div>
+
+            <div class="dashboard-layout">
+                <!-- Graph Panel -->
+                <div class="panel-card" style="position:relative">
+                    <div class="panel-header">
+                        <span class="panel-title">Network Topology</span>
+                        <div class="graph-toolbar">
+                            <button class="tool-btn" id="zoomIn"><i data-lucide="plus"></i></button>
+                            <button class="tool-btn" id="zoomOut"><i data-lucide="minus"></i></button>
+                            <button class="tool-btn" id="fitView"><i data-lucide="maximize"></i></button>
+                        </div>
+                    </div>
+                    <div id="graphContainer"></div>
+                </div>
+
+                <!-- List Panel -->
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <span class="panel-title">High Risk Accounts</span>
+                    </div>
+                    <div class="list-content" id="suspiciousList"></div>
+                </div>
+            </div>
+
+            <!-- Table Panel -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <span class="panel-title">Detected Fraud Rings</span>
+                    <button class="btn-primary" style="padding:0.5rem 1rem; font-size:0.8rem">Export Report</button>
+                </div>
+                <div style="padding:1rem">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ring ID</th>
+                                <th>Pattern Type</th>
+                                <th>Members</th>
+                                <th>Risk Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ringsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <script src="static/script.js"></script>
+    <script src="static/script.js?v=5"></script>
     <script>lucide.createIcons();</script>
 </body>
 
