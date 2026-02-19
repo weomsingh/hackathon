@@ -1,393 +1,508 @@
-
 import csv
 import io
-import datetime
 import time
 from collections import defaultdict
+from datetime import datetime, timedelta
+
 
 class FraudDetector:
+    REQUIRED_COLUMNS = [
+        "transaction_id",
+        "sender_id",
+        "receiver_id",
+        "amount",
+        "timestamp",
+    ]
+
+    ALIASES = {
+        "transaction_id": ["transaction_id", "txn_id", "tx_id", "id"],
+        "sender_id": ["sender_id", "from", "from_account", "source", "source_id"],
+        "receiver_id": ["receiver_id", "to", "to_account", "target", "target_id"],
+        "amount": ["amount", "value", "txn_amount", "transaction_amount"],
+        "timestamp": ["timestamp", "time", "datetime", "txn_time", "transaction_time"],
+    }
+
     def __init__(self):
         self.transactions = []
-        self.nodes = set()
-        self.adj = defaultdict(list)
-        self.rev_adj = defaultdict(list)
-        self.node_stats = defaultdict(lambda: {
-            'sent': 0.0, 'received': 0.0, 'tx_count': 0, 'timestamps': []
-        })
-        self.suspicious_accounts = []
-        self.fraud_rings = []
-        self.graph_data = {"nodes": [], "links": []}
-        
+        self.nodes = {}
+        self.edges = []
+        self.adj = defaultdict(set)
+        self.rev_adj = defaultdict(set)
+        self.legitimate_accounts = set()
+
     def analyze(self, file_storage):
-        start_time = time.time()
-        
-        # 1. Parse
-        self._parse_csv(file_storage)
-        
-        # 2. Detect Patterns
-        cycles = self._find_cycles() # [[A,B,C], ...]
-        smurfs = self._find_smurfing() # {'fan_in': [id...], 'fan_out': [id...]}
-        shells = self._find_shells() # [[A,B,C], ...]
-        
-        # 3. Filter Legitimate (Payroll/Merchants)
-        self._filter_legitimate(smurfs)
-        
-        # 4. Build Results & Scores
-        self._compile_results(cycles, smurfs, shells)
-        
-        # 5. Build D3 Graph Data
-        self._build_graph_json()
-        
-        processing_time = time.time() - start_time
-        
-        return {
-            "analysis": {
-                "suspicious_accounts": self.suspicious_accounts,
-                "fraud_rings": self.fraud_rings,
-                "summary": {
-                    "total_accounts_analyzed": len(self.nodes),
-                    "suspicious_accounts_flagged": len(self.suspicious_accounts),
-                    "fraud_rings_detected": len(self.fraud_rings),
-                    "processing_time_seconds": round(processing_time, 2)
-                }
+        start = time.time()
+        self._reset_state()
+
+        rows = self._parse_csv(file_storage)
+        self._build_graph(rows)
+
+        cycles = self._detect_cycles()
+        smurfing = self._detect_smurfing()
+        shell_accounts = self._detect_shell_chains()
+
+        suspicious_accounts, fraud_rings, suspicion_map = self._compile_results(
+            cycles, smurfing, shell_accounts
+        )
+
+        processing_time = round(time.time() - start, 1)
+
+        report = {
+            "suspicious_accounts": suspicious_accounts,
+            "fraud_rings": fraud_rings,
+            "summary": {
+                "total_accounts_analyzed": len(self.nodes),
+                "suspicious_accounts_flagged": len(suspicious_accounts),
+                "fraud_rings_detected": len(fraud_rings),
+                "processing_time_seconds": float(processing_time),
             },
-            "graph": self.graph_data
         }
-        
+
+        graph = self._build_graph_payload(suspicion_map, suspicious_accounts, fraud_rings)
+        return {"analysis": report, "graph": graph}
+
+    def _reset_state(self):
+        self.transactions = []
+        self.nodes = {}
+        self.edges = []
+        self.adj = defaultdict(set)
+        self.rev_adj = defaultdict(set)
+        self.legitimate_accounts = set()
+
+    def _normalize_header(self, header):
+        return str(header).strip().lower().replace(" ", "_")
+
+    def _canonicalize_fields(self, headers):
+        normalized = {self._normalize_header(h): h for h in headers}
+        mapping = {}
+        for required, aliases in self.ALIASES.items():
+            found = None
+            for alias in aliases:
+                if alias in normalized:
+                    found = normalized[alias]
+                    break
+            if found is None:
+                raise ValueError(
+                    "Missing required columns. Expected: transaction_id, sender_id, receiver_id, amount, timestamp"
+                )
+            mapping[required] = found
+        return mapping
+
+    def _parse_timestamp(self, value):
+        raw = str(value).strip()
+        patterns = [
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y/%m/%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        ]
+        for pattern in patterns:
+            try:
+                return datetime.strptime(raw, pattern)
+            except ValueError:
+                continue
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError as exc:
+            raise ValueError(f"Invalid timestamp format: {raw}") from exc
+
     def _parse_csv(self, file_storage):
-        stream = io.StringIO(file_storage.stream.read().decode("UTF8"), newline=None)
+        try:
+            text = file_storage.read().decode("utf-8")
+        except Exception as exc:
+            raise ValueError("Could not read CSV file") from exc
+
+        stream = io.StringIO(text)
         reader = csv.DictReader(stream)
-        
-        # Normalize headers
-        reader.fieldnames = [h.strip().lower() for h in reader.fieldnames]
-        
-        # Check requirements
-        required = {'sender_id', 'receiver_id', 'amount', 'timestamp'}
-        if not required.issubset(set(reader.fieldnames)):
-            raise ValueError(f"Missing required columns. Found: {reader.fieldnames}")
-            
+        if not reader.fieldnames:
+            raise ValueError("CSV appears empty or invalid")
+
+        field_map = self._canonicalize_fields(reader.fieldnames)
+        parsed = []
         for row in reader:
             try:
-                # Handle possible whitespace in values
-                s = row['sender_id'].strip()
-                r = row['receiver_id'].strip()
-                # Handle potentially empty values
-                if not s or not r: continue
-                
-                amt = float(row['amount'])
-                ts_str = row['timestamp'].strip()
-                try:
-                    ts = datetime.datetime.strptime(ts_str, '%Y-%m-%d %H:%M:%S')
-                except ValueError:
-                    ts = datetime.datetime.fromisoformat(ts_str)
-
-                self.nodes.add(s)
-                self.nodes.add(r)
-                self.adj[s].append(r)
-                self.rev_adj[r].append(s)
-                
-                self.node_stats[s]['sent'] += amt
-                self.node_stats[s]['tx_count'] += 1
-                self.node_stats[s]['timestamps'].append(ts)
-                
-                self.node_stats[r]['received'] += amt
-                self.node_stats[r]['tx_count'] += 1
-                self.node_stats[r]['timestamps'].append(ts)
-                
-                self.graph_data['links'].append({
-                    "source": s, "target": r, "amount": amt, "type": "normal"
-                })
-                
-            except (ValueError, KeyError):
+                txn = {
+                    "transaction_id": str(row[field_map["transaction_id"]]).strip(),
+                    "sender_id": str(row[field_map["sender_id"]]).strip(),
+                    "receiver_id": str(row[field_map["receiver_id"]]).strip(),
+                    "amount": float(row[field_map["amount"]]),
+                    "timestamp": self._parse_timestamp(row[field_map["timestamp"]]),
+                }
+            except (KeyError, ValueError, TypeError):
                 continue
 
-    def _find_cycles(self):
+            if not txn["sender_id"] or not txn["receiver_id"]:
+                continue
+            parsed.append(txn)
+
+        if not parsed:
+            raise ValueError("No valid transactions found in CSV")
+
+        return parsed
+
+    def _ensure_node(self, account_id):
+        if account_id not in self.nodes:
+            self.nodes[account_id] = {
+                "id": account_id,
+                "tx_count": 0,
+                "sent_total": 0.0,
+                "received_total": 0.0,
+                "timestamps": [],
+            }
+
+    def _is_legitimate_account(self, account_id):
+        node = self.nodes[account_id]
+        total_tx = node["tx_count"]
+        unique_senders = len(self.rev_adj.get(account_id, set()))
+        unique_receivers = len(self.adj.get(account_id, set()))
+
+        if unique_receivers >= 20 and unique_senders <= 3:
+            return True
+        if unique_senders >= 20 and unique_receivers <= 3:
+            return True
+        if total_tx >= 100 and (unique_senders + unique_receivers) >= 80:
+            return True
+        return False
+
+    def _build_graph(self, rows):
+        for row in rows:
+            sender = row["sender_id"]
+            receiver = row["receiver_id"]
+            amount = float(row["amount"])
+            ts = row["timestamp"]
+
+            self._ensure_node(sender)
+            self._ensure_node(receiver)
+
+            self.nodes[sender]["tx_count"] += 1
+            self.nodes[receiver]["tx_count"] += 1
+            self.nodes[sender]["sent_total"] += amount
+            self.nodes[receiver]["received_total"] += amount
+            self.nodes[sender]["timestamps"].append(ts)
+            self.nodes[receiver]["timestamps"].append(ts)
+
+            self.edges.append(
+                {
+                    "source": sender,
+                    "target": receiver,
+                    "amount": amount,
+                    "timestamp": ts,
+                }
+            )
+            self.adj[sender].add(receiver)
+            self.rev_adj[receiver].add(sender)
+            self.transactions.append(row)
+
+        for account_id in self.nodes:
+            if self._is_legitimate_account(account_id):
+                self.legitimate_accounts.add(account_id)
+
+    def _detect_cycles(self):
         cycles = []
-        # DFS for cycles length 3-5
-        # Optimization: Only check nodes with in-degree > 0 AND out-degree > 0
-        candidates = [n for n in self.nodes if self.adj[n] and self.rev_adj[n]]
-        
-        seen_cycles = set()
-        
-        def dfs(start, curr, path, depth):
-            if depth > 5: return
-            
-            for neighbor in self.adj[curr]:
-                if neighbor == start and depth >= 3:
-                    # Found cycle
-                    cycle = tuple(sorted(path))
-                    if cycle not in seen_cycles:
-                        seen_cycles.add(cycle)
-                        cycles.append(path[:])
-                elif neighbor not in path:
-                    dfs(start, neighbor, path + [neighbor], depth + 1)
-        
-        # Limit to 500 candidates for performance in hackathon context if needed
-        # But per requirements "10k dataset", strict pruning is better.
-        # We'll just run it. The logic is fine for O(N) where N is small-ish cycles.
-        for node in candidates:
-            # Basic pruning: don't start if node is already part of a found cycle? 
-            # No, might be part of multiple.
-            dfs(node, node, [node], 1)
-            
-        return cycles
 
-    def _find_smurfing(self):
-        fan_in = []
-        fan_out = []
-        
-        for n in self.nodes:
-            # Fan-in: 10+ distinct senders
-            senders = set(self.rev_adj[n])
-            if len(senders) >= 10:
-                if self._check_temporal_density(n, 10, 72):
-                    fan_in.append(n)
-            
-            # Fan-out: 10+ distinct receivers
-            receivers = set(self.adj[n])
-            if len(receivers) >= 10:
-                 if self._check_temporal_density(n, 10, 72):
-                    fan_out.append(n)
-                    
-        return {'fan_in': fan_in, 'fan_out': fan_out}
+        def dfs(start, current, path, depth):
+            if depth > 5:
+                return
+            for neighbor in self.adj.get(current, set()):
+                if neighbor == start and len(path) >= 3:
+                    cycles.append(list(path))
+                elif neighbor not in path and depth < 5:
+                    path.append(neighbor)
+                    dfs(start, neighbor, path, depth + 1)
+                    path.pop()
 
-    def _check_temporal_density(self, node, count, hours):
-        timestamps = sorted(self.node_stats[node]['timestamps'])
-        if len(timestamps) < count: return False
-        
-        # Sliding window
-        # Max number of txs within 'hours' window
-        max_in_window = 0
-        left = 0
-        for right in range(len(timestamps)):
-            while (timestamps[right] - timestamps[left]).total_seconds() / 3600 > hours:
-                left += 1
-            max_in_window = max(max_in_window, right - left + 1)
-        
-        return max_in_window >= count
-
-    def _find_shells(self):
-        # Shell: Chain A->B->C->D where B,C have total tx <= 5
-        shells = []
-        
-        weak_nodes = {n for n in self.nodes 
-                      if 1 <= self.node_stats[n]['tx_count'] <= 5}
-        
-        # Find paths of length >= 3 entirely within weak_nodes (surrounded by normal nodes)
-        # Simplified: Just find chains of weak nodes.
-        
-        visited = set()
-        
-        for n in weak_nodes:
-            if n in visited: continue
-            
-            # DFS to find longest chain
-            chain = [n]
-            stack = [(n, [n])] # node, path
-            
-            while stack:
-                curr, path = stack.pop()
-                
-                # Check neighbors
-                has_weak_neighbor = False
-                for neighbor in self.adj[curr]:
-                    if neighbor in weak_nodes and neighbor not in path:
-                        stack.append((neighbor, path + [neighbor]))
-                        has_weak_neighbor = True
-                
-                if not has_weak_neighbor and len(path) >= 2:
-                    # End of chain. Check if connected to non-weak at ends?
-                    # Requirement: "Money passes through... before reaching final"
-                    # Implies inputs and outputs exist.
-                    if self.rev_adj[path[0]] and self.adj[path[-1]]:
-                        shells.append(path)
-                        for x in path: visited.add(x)
-                        
-        return shells
-
-    def _filter_legitimate(self, smurfs):
-        # Payroll: High Fan-Out, Low In-Degree ratio
-        # Merchant: High Fan-In, Low Out-Degree ratio
-        
-        # Filter Fan-Out Smurfs (Payroll)
-        filtered_out = []
-        for n in smurfs['fan_out']:
-            fan_out_count = len(set(self.adj[n]))
-            fan_in_count = len(set(self.rev_adj[n]))
-            
-            # If Fan-Out is 10x Fan-In, and total > 20 => Legit Payroll
-            if fan_out_count > 20 and (fan_in_count == 0 or fan_out_count / fan_in_count > 10):
-                continue # Skip (Legit)
-            filtered_out.append(n)
-        smurfs['fan_out'] = filtered_out
-
-        # Filter Fan-In Smurfs (Merchants)
-        filtered_in = []
-        for n in smurfs['fan_in']:
-            fan_in_count = len(set(self.rev_adj[n]))
-            fan_out_count = len(set(self.adj[n]))
-            
-             # If Fan-In is 10x Fan-Out => Legit Merchant
-            if fan_in_count > 20 and (fan_out_count == 0 or fan_in_count / fan_out_count > 10):
+        for account_id in self.nodes:
+            if account_id in self.legitimate_accounts:
                 continue
-            filtered_in.append(n)
-        smurfs['fan_in'] = filtered_in
+            dfs(account_id, account_id, [account_id], 1)
 
-    def _compile_results(self, cycles, smurfs, shells):
-        node_scores = defaultdict(int)
-        node_patterns = defaultdict(set)
-        
-        # 1. Processing Cycles
-        ring_counter = 1
+        seen = set()
+        unique = []
         for cycle in cycles:
-            rid = f"RING_{ring_counter:03d}"
-            ring_counter += 1
-            
-            risk = 90.0 + len(cycle) # Higher risk for longer cycles? or shorter? 
-            # Actually shorter cycles (3) are tighter.
-            
-            self.fraud_rings.append({
-                "ring_id": rid,
-                "pattern_type": "cycle",
-                "member_accounts": cycle,
-                "risk_score": min(100.0, risk)
-            })
-            
-            for member in cycle:
-                node_scores[member] += 50
-                node_patterns[member].add(f"cycle_length_{len(cycle)}")
-                # Assign Ring ID (Priority to Cycle)
-                self.node_stats[member]['ring_id'] = rid
-
-        # 2. Processing Smurfs
-        # Group smurfs? Requirement: "Ring ID"
-        for group_type, nodes in smurfs.items():
-            for n in nodes:
-                # If already in cycle, skip creating new ring, just add pattern
-                if n in node_scores: # Simple check if already flagged
-                    node_scores[n] += 30
-                    node_patterns[n].add(group_type + "_smurfing")
-                    continue
-                
-                # Create Smurf Ring (1 node + neighbors)
-                rid = f"RING_{ring_counter:03d}"
-                ring_counter += 1
-                
-                members = [n]
-                # Add a few connected nodes for context
-                if group_type == 'fan_in':
-                    members += self.rev_adj[n][:5]
-                else:
-                    members += self.adj[n][:5]
-                
-                self.fraud_rings.append({
-                    "ring_id": rid,
-                    "pattern_type": "smurfing",
-                    "member_accounts": members,
-                    "risk_score": 75.0
-                })
-                
-                node_scores[n] += 30
-                node_patterns[n].add(group_type + "_smurfing")
-                self.node_stats[n]['ring_id'] = rid
-
-        # 3. Processing Shells
-        for chain in shells:
-            # Check overlap
-            if any(m in node_scores for m in chain):
-                for m in chain:
-                    node_scores[m] += 20
-                    node_patterns[m].add("shell_chain")
+            if len(cycle) < 3 or len(cycle) > 5:
                 continue
-                
-            rid = f"RING_{ring_counter:03d}"
-            ring_counter += 1
-            
-            self.fraud_rings.append({
-                "ring_id": rid,
-                "pattern_type": "shell",
-                "member_accounts": chain,
-                "risk_score": 60.0
-            })
-            
-            for m in chain:
-                node_scores[m] += 20
-                node_patterns[m].add("shell_chain")
-                self.node_stats[m]['ring_id'] = rid
+            key = ",".join(sorted(cycle))
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(cycle)
+        return unique
 
-        # 4. Final Scores
-        for n, score in node_scores.items():
-            # Velocity Bonus
-            if self.node_stats[n]['tx_count'] > 50:
+    def _detect_smurfing(self):
+        result = {
+            "accounts": set(),
+            "fan_in": set(),
+            "fan_out": set(),
+        }
+        threshold = 10
+        window_hours = 72
+
+        account_tx_times = defaultdict(list)
+        for edge in self.edges:
+            account_tx_times[edge["source"]].append(edge["timestamp"])
+            account_tx_times[edge["target"]].append(edge["timestamp"])
+
+        for account_id, node in self.nodes.items():
+            if account_id in self.legitimate_accounts:
+                continue
+
+            in_senders = self.rev_adj.get(account_id, set())
+            out_receivers = self.adj.get(account_id, set())
+
+            if len(in_senders) >= threshold:
+                times = sorted(account_tx_times[account_id])
+                if self._has_dense_window(times, 5, window_hours):
+                    result["accounts"].add(account_id)
+                    result["fan_in"].add(account_id)
+
+            if len(out_receivers) >= threshold:
+                result["accounts"].add(account_id)
+                result["fan_out"].add(account_id)
+
+        return result
+
+    def _has_dense_window(self, sorted_times, min_count, window_hours):
+        if len(sorted_times) < min_count:
+            return False
+
+        left = 0
+        for right in range(len(sorted_times)):
+            while sorted_times[right] - sorted_times[left] > timedelta(hours=window_hours):
+                left += 1
+            if (right - left + 1) >= min_count:
+                return True
+        return False
+
+    def _detect_shell_chains(self):
+        shell_accounts = set()
+
+        potential_shells = {
+            account_id
+            for account_id, node in self.nodes.items()
+            if account_id not in self.legitimate_accounts and 2 <= node["tx_count"] <= 3
+        }
+
+        for start in self.nodes.keys():
+            if start in self.legitimate_accounts:
+                continue
+            queue = [(start, [start])]
+
+            while queue:
+                current, path = queue.pop(0)
+                if len(path) > 5:
+                    continue
+                for nxt in self.adj.get(current, set()):
+                    if nxt in path:
+                        continue
+                    new_path = path + [nxt]
+                    if len(new_path) >= 4:
+                        mids = new_path[1:-1]
+                        if mids and all(mid in potential_shells for mid in mids):
+                            for mid in mids:
+                                shell_accounts.add(mid)
+                    if nxt in potential_shells:
+                        queue.append((nxt, new_path))
+
+        return shell_accounts
+
+    def _calculate_suspicion_score(self, account_id, patterns):
+        score = 0.0
+        node = self.nodes[account_id]
+        p = list(patterns)
+
+        if "cycle_length_3" in p:
+            score += 40
+        if "cycle_length_4" in p:
+            score += 35
+        if "cycle_length_5" in p:
+            score += 30
+        if "fan_in_smurfing" in p:
+            score += 25
+        if "fan_out_smurfing" in p:
+            score += 25
+        if "shell_chain" in p:
+            score += 20
+        if "high_velocity" in p:
+            score += 15
+
+        times = sorted(node["timestamps"])
+        if len(times) >= 2:
+            span_hours = max((times[-1] - times[0]).total_seconds() / 3600.0, 1.0)
+            velocity = len(times) / span_hours
+            if velocity > 2:
                 score += 15
-                node_patterns[n].add("high_velocity")
-            
-            final_score = min(100.0, float(score))
-            
-            self.suspicious_accounts.append({
-                "account_id": n,
-                "suspicion_score": final_score,
-                "detected_patterns": list(node_patterns[n]),
-                "ring_id": self.node_stats[n].get('ring_id') # Might be None
-            })
-            
-        # Sort
-        self.suspicious_accounts.sort(key=lambda x: x['suspicion_score'], reverse=True)
-        self.fraud_rings.sort(key=lambda x: x['risk_score'], reverse=True)
+                if "high_velocity" not in patterns:
+                    patterns.add("high_velocity")
 
-    def _build_graph_json(self):
-        # We need nodes and links
-        # Nodes: include 'type' (fraud, suspicious, normal)
-        # Links: include 'type' (fraud, suspicious, normal)
-        
-        suspicious_ids = {a['account_id'] for a in self.suspicious_accounts}
-        fraud_ids = set()
-        for r in self.fraud_rings:
-            for m in r['member_accounts']:
-                fraud_ids.add(m)
-        
-        # Re-build nodes list with attributes
-        final_nodes = []
-        for n in self.nodes:
-            node_type = 'normal'
-            if n in fraud_ids: node_type = 'fraud'
-            elif n in suspicious_ids: node_type = 'suspicious'
-            
-            # Aggregator check?
-            if len(self.rev_adj[n]) > 10: node_type = 'aggregator' 
-            # (Override normal, but Fraud takes precedence)
-            if n in fraud_ids: node_type = 'fraud'
-            
-            # Find score/ring
-            score = 0
-            ring = None
-            patterns = []
-            
-            # O(N) lookup here is inefficient, but N (suspicious) is small
-            for acc in self.suspicious_accounts:
-                if acc['account_id'] == n:
-                    score = acc['suspicion_score']
-                    ring = acc['ring_id']
-                    patterns = acc['detected_patterns']
-                    break
-            
-            final_nodes.append({
-                "id": n,
-                "type": node_type,
-                "risk_score": score,
-                "ring_id": ring,
-                "detected_patterns": patterns,
-                "transaction_count": self.node_stats[n]['tx_count'],
-                "total_sent": self.node_stats[n]['sent']
-            })
-            
-        self.graph_data['nodes'] = final_nodes
-        
-        # Links already added in parse, but update types?
-        # If both source and target are fraud -> fraud link
-        for link in self.graph_data['links']:
-            s, t = link['source'], link['target']
-            if s in fraud_ids and t in fraud_ids:
-                link['type'] = 'fraud'
-            elif s in suspicious_ids or t in suspicious_ids:
-                link['type'] = 'suspicious'
+        unique_type_roots = {item.split("_")[0] for item in patterns}
+        if len(unique_type_roots) >= 2:
+            score += 10
+
+        return min(100.0, round(score, 1))
+
+    def _calculate_ring_risk_score(self, member_accounts, ring_type, suspicion_map):
+        if not member_accounts:
+            return 0.0
+
+        avg_score = sum(suspicion_map.get(acc, 0.0) for acc in member_accounts) / len(member_accounts)
+        bonus = 0
+        if ring_type == "cycle":
+            bonus = 20
+        elif ring_type == "smurfing":
+            bonus = 15
+        elif ring_type == "shell":
+            bonus = 10
+
+        return min(100.0, round(avg_score + bonus, 1))
+
+    def _compile_results(self, cycles, smurfing, shell_accounts):
+        pattern_map = defaultdict(set)
+        suspicion_map = {}
+
+        for cycle in cycles:
+            cycle_len = len(cycle)
+            if cycle_len not in (3, 4, 5):
+                continue
+            pattern = f"cycle_length_{cycle_len}"
+            for account_id in cycle:
+                if account_id not in self.legitimate_accounts:
+                    pattern_map[account_id].add(pattern)
+
+        for account_id in smurfing["fan_in"]:
+            if account_id not in self.legitimate_accounts:
+                pattern_map[account_id].add("fan_in_smurfing")
+
+        for account_id in smurfing["fan_out"]:
+            if account_id not in self.legitimate_accounts:
+                pattern_map[account_id].add("fan_out_smurfing")
+
+        for account_id in shell_accounts:
+            if account_id not in self.legitimate_accounts:
+                pattern_map[account_id].add("shell_chain")
+
+        for account_id, patterns in pattern_map.items():
+            suspicion_map[account_id] = self._calculate_suspicion_score(account_id, patterns)
+
+        ring_map = {}
+        rings = []
+        ring_counter = 1
+
+        for cycle in cycles:
+            members = sorted({acc for acc in cycle if acc in pattern_map})
+            if len(members) < 3:
+                continue
+            ring_id = f"RING_{ring_counter:03d}"
+            ring_counter += 1
+            for acc in members:
+                ring_map[acc] = ring_id
+
+            rings.append(
+                {
+                    "ring_id": ring_id,
+                    "member_accounts": members,
+                    "pattern_type": "cycle",
+                    "risk_score": 0.0,
+                }
+            )
+
+        smurf_only = sorted([acc for acc in smurfing["accounts"] if acc in pattern_map and acc not in ring_map])
+        if smurf_only:
+            ring_id = f"RING_{ring_counter:03d}"
+            ring_counter += 1
+            for acc in smurf_only:
+                ring_map[acc] = ring_id
+            rings.append(
+                {
+                    "ring_id": ring_id,
+                    "member_accounts": smurf_only,
+                    "pattern_type": "smurfing",
+                    "risk_score": 0.0,
+                }
+            )
+
+        shell_only = sorted([acc for acc in shell_accounts if acc in pattern_map and acc not in ring_map])
+        if shell_only:
+            ring_id = f"RING_{ring_counter:03d}"
+            for acc in shell_only:
+                ring_map[acc] = ring_id
+            rings.append(
+                {
+                    "ring_id": ring_id,
+                    "member_accounts": shell_only,
+                    "pattern_type": "shell",
+                    "risk_score": 0.0,
+                }
+            )
+
+        suspicious = []
+        for account_id in pattern_map:
+            score = float(round(suspicion_map.get(account_id, 0.0), 1))
+            suspicious.append(
+                {
+                    "account_id": account_id,
+                    "suspicion_score": score,
+                    "detected_patterns": sorted(pattern_map[account_id]),
+                    "ring_id": ring_map.get(account_id, "NONE"),
+                }
+            )
+
+        suspicious.sort(key=lambda x: x["suspicion_score"], reverse=True)
+
+        for ring in rings:
+            ring["risk_score"] = float(
+                self._calculate_ring_risk_score(ring["member_accounts"], ring["pattern_type"], suspicion_map)
+            )
+
+        rings.sort(key=lambda x: x["risk_score"], reverse=True)
+        return suspicious, rings, suspicion_map
+
+    def _build_graph_payload(self, suspicion_map, suspicious_accounts, fraud_rings):
+        suspicious_set = {item["account_id"] for item in suspicious_accounts}
+        ring_members = set()
+        ring_by_account = {}
+        for ring in fraud_rings:
+            for acc in ring["member_accounts"]:
+                ring_members.add(acc)
+                ring_by_account[acc] = ring["ring_id"]
+
+        nodes = []
+        for account_id, node in self.nodes.items():
+            ntype = "safe"
+            if account_id in ring_members:
+                ntype = "fraud"
+            elif account_id in suspicious_set:
+                ntype = "suspicious"
+
+            nodes.append(
+                {
+                    "id": account_id,
+                    "type": ntype,
+                    "risk_score": float(round(suspicion_map.get(account_id, 0.0), 1)),
+                    "ring_id": ring_by_account.get(account_id, "NONE"),
+                    "detected_patterns": next(
+                        (s["detected_patterns"] for s in suspicious_accounts if s["account_id"] == account_id),
+                        [],
+                    ),
+                    "transaction_count": node["tx_count"],
+                    "total_sent": float(round(node["sent_total"], 2)),
+                    "total_received": float(round(node["received_total"], 2)),
+                }
+            )
+
+        links = []
+        for edge in self.edges:
+            etype = "normal"
+            if edge["source"] in ring_members and edge["target"] in ring_members:
+                etype = "fraud"
+            elif edge["source"] in suspicious_set or edge["target"] in suspicious_set:
+                etype = "suspicious"
+            links.append(
+                {
+                    "source": edge["source"],
+                    "target": edge["target"],
+                    "amount": float(round(edge["amount"], 2)),
+                    "type": etype,
+                }
+            )
+
+        return {"nodes": nodes, "links": links}
