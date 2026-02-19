@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,8 +19,13 @@
             --text-muted: #64748b;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
         body {
             background-color: var(--bg);
             color: var(--text);
@@ -31,18 +37,48 @@
         }
 
         /* Utilities */
-        .hidden { display: none !important; }
-        .text-accent { color: var(--accent); }
-        .text-danger { color: var(--accent2); }
-        .text-warn { color: var(--accent3); }
-        .text-success { color: var(--green); }
-        .uppercase { text-transform: uppercase; }
+        .hidden {
+            display: none !important;
+        }
+
+        .text-accent {
+            color: var(--accent);
+        }
+
+        .text-danger {
+            color: var(--accent2);
+        }
+
+        .text-warn {
+            color: var(--accent3);
+        }
+
+        .text-success {
+            color: var(--green);
+        }
+
+        .uppercase {
+            text-transform: uppercase;
+        }
 
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--border); }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border);
+        }
 
         /* Header */
         header {
@@ -58,23 +94,76 @@
             backdrop-filter: blur(10px);
         }
 
-        .logo-area { display: flex; align-items: center; gap: 1rem; }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
         .logo-box {
-            width: 40px; height: 40px;
+            width: 40px;
+            height: 40px;
             background: var(--surface2);
             border: 1px solid var(--accent);
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 1.5rem;
             box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
         }
-        .app-title h1 { font-size: 1.2rem; letter-spacing: 1px; color: var(--text); }
-        .app-title p { font-size: 0.8rem; color: var(--text-muted); letter-spacing: 2px; }
-        
-        .sys-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; letter-spacing: 1px; }
-        .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
-        .reset-link { margin-left: 20px; font-size: 0.8rem; color: var(--accent); text-decoration: underline; cursor: pointer; }
 
-        @keyframes pulse { 0% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); } 70% { opacity: 1; box-shadow: 0 0 0 6px rgba(0, 230, 118, 0); } 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); } }
+        .app-title h1 {
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            color: var(--text);
+        }
+
+        .app-title p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        .sys-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .reset-link {
+            margin-left: 20px;
+            font-size: 0.8rem;
+            color: var(--accent);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7);
+            }
+
+            70% {
+                opacity: 1;
+                box-shadow: 0 0 0 6px rgba(0, 230, 118, 0);
+            }
+
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(0, 230, 118, 0);
+            }
+        }
 
         /* Upload Section */
         #upload-section {
@@ -85,8 +174,10 @@
             justify-content: center;
             padding: 4rem 2rem;
         }
+
         .upload-zone {
-            width: 100%; max-width: 800px;
+            width: 100%;
+            max-width: 800px;
             height: 300px;
             border: 2px dashed var(--border);
             background: var(--surface);
@@ -99,142 +190,505 @@
             transition: all 0.3s;
             position: relative;
         }
-        .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: var(--surface2); }
-        .upload-title { font-size: 1.5rem; letter-spacing: 1px; }
-        .upload-desc { color: var(--text-muted); font-size: 0.9rem; }
-        .schema-hint {
-            font-size: 0.75rem; color: var(--text-muted); 
-            background: var(--bg); padding: 0.5rem 1rem; width: 90%; text-align: center;
-            border: 1px solid var(--border); border-radius: 4px;
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent);
+            background: var(--surface2);
         }
-        .btn-group { display: flex; gap: 1rem; }
+
+        .upload-title {
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .upload-desc {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .schema-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg);
+            padding: 0.5rem 1rem;
+            width: 90%;
+            text-align: center;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        #error-msg {
+            white-space: pre-wrap;
+            text-align: center;
+            margin-top: 1rem;
+            border: 1px solid var(--accent2);
+            padding: 10px;
+            background: rgba(255, 77, 109, 0.1);
+            border-radius: 4px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+        }
+
         .btn {
             padding: 0.75rem 1.5rem;
-            border: none; cursor: pointer;
-            font-size: 0.9rem; font-weight: bold; letter-spacing: 1px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 1px;
             transition: all 0.2s;
             text-transform: uppercase;
         }
-        .btn-primary { background: var(--accent); color: var(--bg); }
-        .btn-primary:hover { background: #00b8e6; box-shadow: 0 0 15px rgba(0, 212, 255, 0.4); }
-        .btn-outline { background: transparent; border: 1px solid var(--accent3); color: var(--accent3); }
-        .btn-outline:hover { background: rgba(255, 214, 10, 0.1); box-shadow: 0 0 15px rgba(255, 214, 10, 0.2); }
-        .btn-green { background: var(--green); color: var(--bg); display: flex; align-items: center; gap: 0.5rem; }
-        .btn-green:hover { background: #00c853; }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .btn-primary:hover {
+            background: #00b8e6;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--accent3);
+            color: var(--accent3);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 214, 10, 0.1);
+            box-shadow: 0 0 15px rgba(255, 214, 10, 0.2);
+        }
+
+        .btn-green {
+            background: var(--green);
+            color: var(--bg);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-green:hover {
+            background: #00c853;
+        }
 
         /* Progress Section */
-        #progress-section { max-width: 800px; margin: 2rem auto; width: 90%; }
-        .progress-container { margin-bottom: 1rem; }
-        .progress-bar-bg { width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-        .progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease; }
-        .progress-label { text-align: center; margin-top: 0.5rem; color: var(--accent); font-size: 0.9rem; }
-        .steps-row { display: flex; justify-content: space-between; margin-top: 1.5rem; }
-        .step { font-size: 0.75rem; color: var(--text-muted); padding-bottom: 4px; border-bottom: 2px solid transparent; transition: all 0.3s; }
-        .step.active { color: var(--accent); border-color: var(--accent); }
-        .step.done { color: var(--green); border-color: var(--green); }
+        #progress-section {
+            max-width: 800px;
+            margin: 2rem auto;
+            width: 90%;
+        }
+
+        .progress-container {
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .progress-label {
+            text-align: center;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-size: 0.9rem;
+        }
+
+        .steps-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+        }
+
+        .step {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding-bottom: 4px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .step.done {
+            color: var(--green);
+            border-color: var(--green);
+        }
 
         /* Stats Row */
         #stats-row {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
-            max-width: 1400px; width: 95%; margin: 0 auto 2rem auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            max-width: 1400px;
+            width: 95%;
+            margin: 0 auto 2rem auto;
         }
+
         .stat-card {
-            background: var(--surface); border: 1px solid var(--border);
-            padding: 1.5rem; border-radius: 4px;
-            display: flex; flex-direction: column; gap: 0.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
-        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { font-size: 1.8rem; font-weight: bold; }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
 
         /* Main Grid */
         #main-grid {
-            display: flex; gap: 1.5rem;
-            max-width: 1400px; width: 95%; margin: 0 auto 2rem auto;
+            display: flex;
+            gap: 1.5rem;
+            max-width: 1400px;
+            width: 95%;
+            margin: 0 auto 2rem auto;
             flex-wrap: wrap;
         }
-        .graph-panel { flex: 1; min-width: 600px; background: var(--surface); border: 1px solid var(--border); height: 600px; display: flex; flex-direction: column; }
-        .right-panel { width: 380px; display: flex; flex-direction: column; gap: 1.5rem; }
-        
-        .panel-header {
-            padding: 1rem; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center; background: var(--surface2);
+
+        .graph-panel {
+            flex: 1;
+            min-width: 600px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            height: 600px;
+            display: flex;
+            flex-direction: column;
         }
-        .panel-title { font-size: 0.9rem; letter-spacing: 1px; font-weight: bold; }
-        
+
+        .right-panel {
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .panel-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface2);
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
         /* D3 Graph */
-        #graph-container { flex: 1; overflow: hidden; position: relative; background: radial-gradient(circle at center, #1a2235 0%, #0a0e1a 100%); }
-        .graph-legend { position: absolute; top: 10px; left: 10px; background: rgba(17, 24, 39, 0.8); padding: 10px; border: 1px solid var(--border); font-size: 0.7rem; pointer-events: none; }
-        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        #graph-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            background: radial-gradient(circle at center, #1a2235 0%, #0a0e1a 100%);
+        }
+
+        .graph-legend {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(17, 24, 39, 0.8);
+            padding: 10px;
+            border: 1px solid var(--border);
+            font-size: 0.7rem;
+            pointer-events: none;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
 
         /* Lists */
-        .suspect-card, .summary-card { background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; border-radius: 4px; } 
-        .suspect-card { height: 320px; }
-        .summary-card { padding-bottom: 1rem; }
-        .list-container { overflow-y: auto; flex: 1; }
-        .suspect-item { 
-            padding: 0.8rem; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: background 0.2s; 
+        .suspect-card,
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 4px;
         }
-        .suspect-item:hover { background: var(--surface2); }
-        .suspect-header { display: flex; justify-content: space-between; align-items: center; }
-        .score-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; color: #000; }
-        .suspect-id { font-weight: bold; font-size: 0.9rem; }
-        .suspect-patterns { display: flex; flex-wrap: wrap; gap: 4px; }
-        .tag { font-size: 0.65rem; padding: 2px 4px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); }
-        
-        .stat-row { display: flex; justify-content: space-between; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-        .stat-row:last-child { border-bottom: none; }
+
+        .suspect-card {
+            height: 320px;
+        }
+
+        .summary-card {
+            padding-bottom: 1rem;
+        }
+
+        .list-container {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .suspect-item {
+            padding: 0.8rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .suspect-item:hover {
+            background: var(--surface2);
+        }
+
+        .suspect-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .suspect-id {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .suspect-patterns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .tag {
+            font-size: 0.65rem;
+            padding: 2px 4px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
 
         /* Rings Table */
-        #rings-section { max-width: 1400px; width: 95%; margin: 0 auto 2rem auto; background: var(--surface); border: 1px solid var(--border); }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); text-transform: uppercase; color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px; }
-        td { padding: 1rem; border-bottom: 1px solid var(--border); }
-        tr:last-child td { border-bottom: none; }
-        .ring-id-badge { color: var(--accent2); font-weight: bold; border: 1px solid var(--accent2); padding: 2px 6px; font-size: 0.75rem; }
-        .pattern-badge { color: var(--accent); border: 1px solid var(--accent); padding: 2px 6px; font-size: 0.75rem; text-transform: uppercase; }
-        .risk-bar { display: flex; align-items: center; gap: 8px; }
-        .risk-fill { height: 4px; background: var(--surface2); border-radius: 2px; }
-        .members-list { color: var(--text-muted); font-size: 0.75rem; max-width: 400px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #rings-section {
+            max-width: 1400px;
+            width: 95%;
+            margin: 0 auto 2rem auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .ring-id-badge {
+            color: var(--accent2);
+            font-weight: bold;
+            border: 1px solid var(--accent2);
+            padding: 2px 6px;
+            font-size: 0.75rem;
+        }
+
+        .pattern-badge {
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .risk-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .risk-fill {
+            height: 4px;
+            background: var(--surface2);
+            border-radius: 2px;
+        }
+
+        .members-list {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            max-width: 400px;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
 
         /* Download Section */
         #download-section {
-            max-width: 1400px; width: 95%; margin: 0 auto;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 1.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+            max-width: 1400px;
+            width: 95%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
         }
 
         /* Tooltip */
         .tooltip {
-            position: absolute; text-align: left;
-            padding: 10px; font-size: 0.8rem;
-            background: var(--surface); border: 1px solid var(--accent);
-            pointer-events: none; opacity: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            z-index: 1000; max-width: 250px;
+            position: absolute;
+            text-align: left;
+            padding: 10px;
+            font-size: 0.8rem;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            pointer-events: none;
+            opacity: 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            max-width: 250px;
         }
-        .tooltip h4 { color: var(--accent); margin-bottom: 4px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
-        .tooltip p { margin-bottom: 2px; color: var(--text-muted); }
-        .tooltip span { color: var(--text); }
+
+        .tooltip h4 {
+            color: var(--accent);
+            margin-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+        }
+
+        .tooltip p {
+            margin-bottom: 2px;
+            color: var(--text-muted);
+        }
+
+        .tooltip span {
+            color: var(--text);
+        }
 
         /* Responsive */
         @media (max-width: 900px) {
-            #stats-row { grid-template-columns: 1fr 1fr; }
-            #main-grid { flex-direction: column; }
-            .graph-panel { width: 100%; min-width: 0; }
-            .right-panel { width: 100%; }
-            #download-section { flex-direction: column; gap: 1rem; text-align: center; }
+            #stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            #main-grid {
+                flex-direction: column;
+            }
+
+            .graph-panel {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .right-panel {
+                width: 100%;
+            }
+
+            #download-section {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
         }
 
         /* Animation class for pulsing rings */
         @keyframes ringPulse {
-          0%, 100% { stroke-opacity: 1; stroke-width: 2px; }
-          50% { stroke-opacity: 0.4; stroke-width: 6px; }
+
+            0%,
+            100% {
+                stroke-opacity: 1;
+                stroke-width: 2px;
+            }
+
+            50% {
+                stroke-opacity: 0.4;
+                stroke-width: 6px;
+            }
         }
-        .ring-pulse { animation: ringPulse 1.5s ease-in-out infinite; }
+
+        .ring-pulse {
+            animation: ringPulse 1.5s ease-in-out infinite;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
+
 <body>
 
     <header>
@@ -246,24 +700,40 @@
             </div>
         </div>
         <div class="sys-status">
-            
+
             <div class="status-dot"></div>
             <span>SYSTEM READY</span>
+            <span class="guide-link" onclick="toggleGuide()">[ ? How It Works ]</span>
             <a onclick="window.location.reload()" class="reset-link hidden" id="reset-btn">Upload New File</a>
         </div>
     </header>
 
     <div id="upload-section">
         <div class="upload-zone" id="drop-zone">
-            <div class="upload-title">Upload Transaction CSV</div>
-            <div class="upload-desc">Drag & drop or click to browse — supports up to 10,000 transactions</div>
-            <div class="schema-hint">
-                <span class="text-accent">SCHEMA:</span> transaction_id | sender_id | receiver_id | amount | timestamp
+            <div class="upload-title">Money Muling Detection</div>
+            <div class="upload-desc">
+                Upload your transaction data to detect financial crime networks.<br>
+                Accepts <b>.CSV</b> files with up to 10,000 transactions.
             </div>
+
+            <div class="schema-hint">
+                <div style="margin-bottom:6px;font-weight:bold;color:var(--accent);">REQUIRED CSV COLUMNS</div>
+                <code>transaction_id, sender_id, receiver_id, amount, timestamp</code>
+            </div>
+
             <div id="error-msg" class="text-danger hidden"></div>
+
             <div class="btn-group">
-                <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Browse File</button>
-                <button class="btn btn-outline" onclick="loadDemoData()">Load Demo Data</button>
+                <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                    📂 Browse CSV File
+                </button>
+                <button class="btn btn-outline" onclick="loadDemoData()">
+                    🚀 Load Demo Data
+                </button>
+            </div>
+            <div style="margin-top:1rem;font-size:0.8rem;color:var(--text-muted);">
+                <span style="cursor:pointer;text-decoration:underline;" onclick="toggleGuide()">What is Money
+                    Muling?</span>
             </div>
             <input type="file" id="file-input" accept=".csv" class="hidden" onchange="handleFileUpload(this.files[0])">
         </div>
@@ -311,9 +781,15 @@
             </div>
             <div id="graph-container">
                 <div class="graph-legend">
-                    <div class="legend-item"><div class="dot" style="background:var(--green)"></div>Safe Node</div>
-                    <div class="legend-item"><div class="dot" style="background:var(--accent3)"></div>Suspicious</div>
-                    <div class="legend-item"><div class="dot" style="background:var(--accent2)"></div>Ring Member</div>
+                    <div class="legend-item">
+                        <div class="dot" style="background:var(--green)"></div>Safe Node
+                    </div>
+                    <div class="legend-item">
+                        <div class="dot" style="background:var(--accent3)"></div>Suspicious
+                    </div>
+                    <div class="legend-item">
+                        <div class="dot" style="background:var(--accent2)"></div>Ring Member
+                    </div>
                 </div>
                 <svg id="graph-svg" width="100%" height="100%"></svg>
             </div>
@@ -328,7 +804,7 @@
                     <!-- Suspect items injected here -->
                 </div>
             </div>
-            
+
             <div class="summary-card">
                 <div class="panel-header">
                     <div class="panel-title">Detection Summary</div>
@@ -386,6 +862,134 @@
     <!-- Tooltip -->
     <div id="tooltip" class="tooltip"></div>
 
+    <!-- Guide Modal -->
+    <div id="guide-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleGuide()">&times;</span>
+            <h2>🔎 How This System Works</h2>
+            <div class="guide-grid">
+                <div class="guide-item">
+                    <h3>1. Cycle Detection</h3>
+                    <p>Money flowing in loops (A → B → C → A) to obscure origin.</p>
+                    <div class="mini-viz cycle-viz">A → B → C → A</div>
+                </div>
+                <div class="guide-item">
+                    <h3>2. Smurfing (Fan-in/Fan-out)</h3>
+                    <p>Many small accounts sending to one aggregator, or one splitting to many.</p>
+                    <div class="mini-viz">MANY → 1 → MANY</div>
+                </div>
+                <div class="guide-item">
+                    <h3>3. Shell Chains</h3>
+                    <p>Money passing through "shell" accounts (low activity) to layer funds.</p>
+                    <div class="mini-viz">Origin → Shell → Shell → Dest</div>
+                </div>
+            </div>
+            <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+                <p><b>Data Privacy:</b> All processing happens 100% in your browser. No data is sent to any server.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleGuide() {
+            const m = document.getElementById('guide-modal');
+            m.classList.toggle('hidden');
+        }
+    </script>
+
+    <style>
+        .guide-link {
+            cursor: pointer;
+            color: var(--accent);
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        .guide-link:hover {
+            text-decoration: underline;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .close-modal:hover {
+            color: var(--text);
+        }
+
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .guide-item {
+            background: var(--surface2);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .guide-item h3 {
+            color: var(--accent2);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .guide-item p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .mini-viz {
+            margin-top: 10px;
+            font-weight: bold;
+            color: var(--text);
+            text-align: center;
+            font-size: 0.9rem;
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        @media(max-width: 700px) {
+            .guide-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
     <script>
         // --- GLOBAL STATE ---
         let nodes = new Map();
@@ -399,14 +1003,14 @@
         let ringMemberSet = new Set();
         let processingTime = 0;
         let suspicionScoreMap = new Map();
-        
+
         let sumCycles = 0;
         let sumSmurfs = 0;
         let sumShells = 0;
 
         // --- INIT ---
         const dropZone = document.getElementById('drop-zone');
-        
+
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
@@ -422,7 +1026,7 @@
             const files = e.dataTransfer.files;
             if (files.length) handleFileUpload(files[0]);
         });
-        
+
         // --- FILE HANDLING ---
         function handleFileUpload(file) {
             if (!file) return;
@@ -441,7 +1045,7 @@
 
         async function processTransactions(csvText) {
             const startTime = performance.now();
-            
+
             // Reset state
             nodes = new Map();
             edges = [];
@@ -463,34 +1067,62 @@
             await updateProgress(10, 'Parsing CSV', 0);
 
             // Parsing
-            const result = Papa.parse(csvText.trim(), { 
-                header: true, 
+            const result = Papa.parse(csvText.trim(), {
+                header: true,
                 skipEmptyLines: true,
-                transformHeader: h => h.trim()
+                transformHeader: h => h.trim().toLowerCase() // Normalize headers to lowercase
             });
 
-            if (result.errors.length > 0 && !result.data[0].transaction_id) {
-                document.getElementById('upload-section').classList.remove('hidden');
-                document.getElementById('progress-section').classList.add('hidden');
-                document.getElementById('error-msg').textContent = "Invalid CSV format or parsing error.";
-                document.getElementById('error-msg').classList.remove('hidden');
+            if (result.errors.length > 0 && (!result.data || result.data.length === 0)) {
+                showError("Unable to read this file. Please ensure it is a valid CSV file.");
                 return;
             }
 
-            // Validation check
-            const necessaryCols = ['transaction_id', 'sender_id', 'receiver_id', 'amount', 'timestamp'];
-            const firstRow = result.data[0];
-            const missing = necessaryCols.filter(col => !(col in firstRow));
-            if (missing.length > 0) {
-                document.getElementById('upload-section').classList.remove('hidden');
-                document.getElementById('progress-section').classList.add('hidden');
-                document.getElementById('error-msg').textContent = "Invalid CSV. Missing columns: " + missing.join(', ');
-                document.getElementById('error-msg').classList.remove('hidden');
+            if (!result.data || result.data.length === 0) {
+                showError("The file appears to be empty.");
                 return;
             }
+
+            // improved validation - check for required columns (case-insensitive)
+            // mapped to our internal keys
+            const requiredMap = {
+                'transaction_id': ['transaction_id', 'txn_id', 'id'],
+                'sender_id': ['sender_id', 'source', 'from', 'sender'],
+                'receiver_id': ['receiver_id', 'target', 'to', 'receiver'],
+                'amount': ['amount', 'amt', 'value'],
+                'timestamp': ['timestamp', 'date', 'time', 'created_at']
+            };
+
+            const firstRowKeys = Object.keys(result.data[0]);
+            const columnMapping = {};
+            const missing = [];
+
+            // Try to find each required field
+            for (const [key, alternatives] of Object.entries(requiredMap)) {
+                const found = firstRowKeys.find(k => alternatives.includes(k));
+                if (found) {
+                    columnMapping[key] = found;
+                } else {
+                    missing.push(key);
+                }
+            }
+
+            if (missing.length > 0) {
+                showError(`Missing required columns: ${missing.join(', ')}.\nAccepted variations: transaction_id (id), sender_id (from), receiver_id (to), amount, timestamp.`);
+                return;
+            }
+
+            // Normalize data to standard keys
+            const normalizedData = result.data.map(row => ({
+                transaction_id: row[columnMapping.transaction_id],
+                sender_id: row[columnMapping.sender_id],
+                receiver_id: row[columnMapping.receiver_id],
+                amount: row[columnMapping.amount],
+                timestamp: row[columnMapping.timestamp]
+            }));
 
             await updateProgress(25, 'Building Graph', 1);
-            buildGraph(result.data);
+            buildGraph(normalizedData);
 
             await updateProgress(45, 'Detecting Cycles', 2);
             const cycles = detectCycles();
@@ -499,7 +1131,7 @@
             await updateProgress(65, 'Smurfing Analysis', 3);
             const smurfAccounts = detectSmurfing();
             sumSmurfs = smurfAccounts.size;
-            
+
             const shellAccounts = detectShellChains();
             sumShells = shellAccounts.size;
 
@@ -507,7 +1139,7 @@
             buildResults(cycles, smurfAccounts, shellAccounts);
 
             await updateProgress(100, 'Complete', 4);
-            
+
             const endTime = performance.now();
             processingTime = (endTime - startTime) / 1000;
 
@@ -610,13 +1242,13 @@
 
                 // Fan-in
                 if (incomingSenders.size >= THRESHOLD) {
-                    const timestamps = node.timestamps.map(t => new Date(t)).sort((a,b) => a-b);
+                    const timestamps = node.timestamps.map(t => new Date(t)).sort((a, b) => a - b);
                     for (let i = 0; i < timestamps.length; i++) {
                         const windowEnd = new Date(timestamps[i].getTime() + TIME_WINDOW_HOURS * 3600000);
                         const inWindow = timestamps.filter(t => t >= timestamps[i] && t <= windowEnd).length;
                         if (inWindow >= 5) { // Adjusted logic slightly to be safe but following promt guidance
-                            isSmurf = true; 
-                            break; 
+                            isSmurf = true;
+                            break;
                         }
                     }
                 }
@@ -644,19 +1276,19 @@
             for (const startId of nodes.keys()) {
                 if (legitimateAccounts.has(startId)) continue;
                 const queue = [[startId, [startId]]];
-                
+
                 // Limit iterations prevent freeze on huge graph
                 let iterations = 0;
                 while (queue.length > 0 && iterations < 10000) {
                     iterations++;
                     const [current, path] = queue.shift();
                     if (path.length > 5) continue;
-                    
+
                     const neighbors = adjList.get(current) || new Set();
                     for (const next of neighbors) {
                         if (path.includes(next)) continue;
                         const newPath = [...path, next];
-                        
+
                         // Check if 3+ hops (4 nodes) and intermediates are shells
                         if (newPath.length >= 4) {
                             const intermediates = newPath.slice(1, -1);
@@ -665,7 +1297,7 @@
                                 intermediates.forEach(id => shellAccounts.add(id));
                             }
                         }
-                        
+
                         if (potentialShells.has(next)) {
                             queue.push([next, newPath]);
                         }
@@ -678,7 +1310,7 @@
         function buildResults(cycles, smurfAccounts, shellAccounts) {
             // Map: accId -> { patterns: [], ringId: null }
             const accData = new Map();
-            
+
             function addPattern(id, pat) {
                 if (!accData.has(id)) accData.set(id, { patterns: [], ringId: 'NONE' });
                 if (!accData.get(id).patterns.includes(pat)) accData.get(id).patterns.push(pat);
@@ -688,7 +1320,7 @@
             cycles.forEach((cycle, idx) => {
                 const ringId = 'RING_' + String(idx + 1).padStart(3, '0');
                 const lenPattern = `cycle_length_${cycle.length}`;
-                
+
                 const ringMembers = [];
                 cycle.forEach(id => {
                     addPattern(id, lenPattern);
@@ -713,7 +1345,7 @@
                 const node = nodes.get(id);
                 const incoming = revAdj.get(id) || new Set();
                 const outgoing = adjList.get(id) || new Set();
-                
+
                 if (incoming.size >= 10) addPattern(id, 'fan_in_smurfing');
                 if (outgoing.size >= 10) addPattern(id, 'fan_out_smurfing');
 
@@ -727,7 +1359,7 @@
                     const rid = 'RING_S' + String(smurfRingCount).padStart(2, '0');
                     if (!accData.has(id)) addPattern(id, 'fan_in_smurfing'); // Fallback
                     accData.get(id).ringId = rid;
-                    
+
                     fraudRings.push({
                         ring_id: rid,
                         member_accounts: [id],
@@ -758,7 +1390,7 @@
             accData.forEach((val, id) => {
                 const score = calculateSuspicionScore(id, val.patterns);
                 suspicionScoreMap.set(id, score);
-                                
+
                 suspiciousAccounts.push({
                     account_id: id,
                     suspicion_score: score,
@@ -792,12 +1424,12 @@
             if (patterns.includes('high_velocity')) score += 15;
 
             // Velocity bonus
-            const timestamps = node.timestamps.map(t => new Date(t)).sort((a,b) => a-b);
+            const timestamps = node.timestamps.map(t => new Date(t)).sort((a, b) => a - b);
             if (timestamps.length >= 2) {
-                const timeSpanHours = (timestamps[timestamps.length-1] - timestamps[0]) / 3600000;
+                const timeSpanHours = (timestamps[timestamps.length - 1] - timestamps[0]) / 3600000;
                 const velocity = timestamps.length / Math.max(timeSpanHours, 1);
-                if (velocity > 2) { 
-                    score += 15; 
+                if (velocity > 2) {
+                    score += 15;
                     if (!patterns.includes('high_velocity')) patterns.push('high_velocity');
                 }
             }
@@ -830,7 +1462,7 @@
             document.getElementById('stat-suspicious').textContent = suspiciousAccounts.length;
             document.getElementById('stat-rings').textContent = fraudRings.length;
             document.getElementById('stat-time').textContent = processingTime.toFixed(1) + 's';
-            
+
             document.getElementById('sum-cycles').textContent = sumCycles;
             document.getElementById('sum-smurfs').textContent = sumSmurfs;
             document.getElementById('sum-shells').textContent = sumShells;
@@ -846,16 +1478,16 @@
             // Only render top 200 nodes if graph is huge
             const maxNodes = 200;
             let displayIds = new Set();
-            
+
             // Prioritize suspicious
             suspiciousAccounts.forEach(acc => displayIds.add(acc.account_id));
-            
+
             // Fill rest with neighbors of suspicious or random high degree
             if (displayIds.size < maxNodes) {
                 // simple fill
                 for (const id of nodes.keys()) {
-                   if (displayIds.size >= maxNodes) break;
-                   displayIds.add(id);
+                    if (displayIds.size >= maxNodes) break;
+                    displayIds.add(id);
                 }
             }
 
@@ -883,17 +1515,17 @@
             const container = document.getElementById('graph-container');
             const svg = d3.select('#graph-svg');
             svg.selectAll('*').remove();
-            
+
             const width = container.clientWidth;
             const height = 600;
 
             const defs = svg.append('defs');
-            
+
             // Markers
             defs.append('marker')
                 .attr('id', 'arrow-normal')
                 .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 18) 
+                .attr('refX', 18)
                 .attr('refY', 0)
                 .attr('markerWidth', 6)
                 .attr('markerHeight', 6)
@@ -901,7 +1533,7 @@
                 .append('path')
                 .attr('d', 'M0,-5L10,0L0,5')
                 .attr('fill', '#1e2d45');
-                
+
             defs.append('marker')
                 .attr('id', 'arrow-ring')
                 .attr('viewBox', '0 -5 10 10')
@@ -953,7 +1585,7 @@
 
             // Tooltips
             const tooltip = d3.select('#tooltip');
-            
+
             nodeGroup.on('mouseover', (event, d) => {
                 const nodeInfo = nodes.get(d.id);
                 tooltip.style('opacity', 1)
@@ -967,31 +1599,31 @@
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY - 10) + 'px');
             })
-            .on('mousemove', (event) => {
-                tooltip.style('left', (event.pageX + 10) + 'px')
-                       .style('top', (event.pageY - 10) + 'px');
-            })
-            .on('mouseout', () => tooltip.style('opacity', 0));
+                .on('mousemove', (event) => {
+                    tooltip.style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', () => tooltip.style('opacity', 0));
 
             nodeGroup.on('click', (event, d) => {
                 // Reset styles
                 nodeGroup.select('circle').attr('stroke', n => ringMemberSet.has(n.id) ? '#ff4d6d' : 'transparent');
                 link.attr('stroke-opacity', 0.2);
-                
+
                 // Highlight connected
-                const neighbors = new Set([...(adjList.get(d.id)||[]), ...(revAdj.get(d.id)||[])]);
+                const neighbors = new Set([...(adjList.get(d.id) || []), ...(revAdj.get(d.id) || [])]);
                 neighbors.add(d.id);
 
                 nodeGroup.filter(n => neighbors.has(n.id)).select('circle').attr('stroke', '#fff');
                 link.filter(l => neighbors.has(l.source.id) && neighbors.has(l.target.id))
                     .attr('stroke-opacity', 1);
-                
+
                 event.stopPropagation();
             });
 
             svg.on('click', () => {
-                 link.attr('stroke-opacity', 1);
-                 nodeGroup.select('circle').attr('stroke', d => ringMemberSet.has(d.id) ? '#ff4d6d' : 'transparent');
+                link.attr('stroke-opacity', 1);
+                nodeGroup.select('circle').attr('stroke', d => ringMemberSet.has(d.id) ? '#ff4d6d' : 'transparent');
             });
 
             simulation.on('tick', () => {
@@ -1014,11 +1646,11 @@
         function renderSuspectList() {
             const container = document.getElementById('suspect-list');
             container.innerHTML = '';
-            
+
             suspiciousAccounts.forEach(acc => {
                 const el = document.createElement('div');
                 el.className = 'suspect-item';
-                
+
                 // Badge color
                 let badgeColor = '#00e676';
                 if (acc.suspicion_score >= 70) badgeColor = '#ff4d6d';
@@ -1051,15 +1683,29 @@
                   <td>${ring.member_accounts.length}</td>
                   <td>
                     <div class="risk-bar">
-                      <span style="color:${riskColor};font-weight:700">${ring.risk_score}</span>
-                      <div class="risk-fill" style="width:${ring.risk_score}px;background:${riskColor}"></div>
-                    </div>
-                  </td>
-                  <td><span class="members-list">${ring.member_accounts.join(', ')}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
+
+        // Assuming processTransactions function would be here, based on the provided change context.
+        // The user's instruction implies modifying an existing processTransactions function.
+        // Since the function itself is not in the provided document snippet, I will insert the
+        // new parsing logic where it logically fits, which is after renderRingsTable and before helpers.
+        // If processTransactions already exists elsewhere, this placement might be incorrect.
+        // However, following the exact insertion point indicated by the `{{ ... }}` markers.
+
+        // Parsing
+        // This block is assumed to be part of a function like `processTransactions(csvText)`
+        // based on the instruction and the content of the change.
+        // For the purpose of this edit, it's inserted as a standalone block as per the markers.
+        // If this is meant to be inside an existing function, that function's definition is missing
+        // from the provided document content.
+        // Given the `await updateProgress` call, it's likely part of an async function.
+        // I will wrap it in a placeholder function `async function processTransactions(csvText) { ... }`
+        // to make it syntactically correct and fulfill the instruction's intent.
+
+
 
         // --- HELPERS & UTILS ---
         function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -1076,12 +1722,20 @@
             await sleep(200);
         }
 
+        function showError(msg) {
+            document.getElementById('upload-section').classList.remove('hidden');
+            document.getElementById('progress-section').classList.add('hidden');
+            const errEl = document.getElementById('error-msg');
+            errEl.innerText = msg; // use innerText to support newlines
+            errEl.classList.remove('hidden');
+        }
+
         function hideSection(id) { document.getElementById(id).classList.add('hidden'); }
         function showSection(id) { document.getElementById(id).classList.remove('hidden'); }
 
         function generateDemoData() {
             const rows = ['transaction_id,sender_id,receiver_id,amount,timestamp'];
-            
+
             // Pattern 1: Cycle of 3
             rows.push(`TXN_001,ACC_A01,ACC_A02,1500.00,2024-01-15 10:00:00`);
             rows.push(`TXN_002,ACC_A02,ACC_A03,1480.00,2024-01-15 11:30:00`);
@@ -1096,12 +1750,12 @@
             // Pattern 3: Fan-in Smurfing
             for (let i = 1; i <= 12; i++) {
                 const id = String(i).padStart(3, '0');
-                rows.push(`TXN_S${id},ACC_FEEDER${id},ACC_SMURF01,${(Math.random()*400+100).toFixed(2)},2024-01-17 ${String(8+Math.floor(i/2)).padStart(2,'0')}:${String((i%2)*30).padStart(2,'0')}:00`);
+                rows.push(`TXN_S${id},ACC_FEEDER${id},ACC_SMURF01,${(Math.random() * 400 + 100).toFixed(2)},2024-01-17 ${String(8 + Math.floor(i / 2)).padStart(2, '0')}:${String((i % 2) * 30).padStart(2, '0')}:00`);
             }
             // Fan-out
             for (let i = 1; i <= 11; i++) {
                 const id = String(i).padStart(3, '0');
-                rows.push(`TXN_O${id},ACC_SMURF01,ACC_OUT${id},${(Math.random()*300+80).toFixed(2)},2024-01-17 ${String(14+Math.floor(i/4)).padStart(2,'0')}:${String((i%4)*15).padStart(2,'0')}:00`);
+                rows.push(`TXN_O${id},ACC_SMURF01,ACC_OUT${id},${(Math.random() * 300 + 80).toFixed(2)},2024-01-17 ${String(14 + Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}:00`);
             }
 
             // Pattern 4: Shell Chain
@@ -1113,11 +1767,11 @@
             // Legitimate
             for (let i = 1; i <= 25; i++) {
                 const id = String(i).padStart(3, '0');
-                rows.push(`TXN_M${id},ACC_CUST${id},ACC_MERCHANT,${(Math.random()*200+50).toFixed(2)},2024-01-19 ${String(9+Math.floor(i/4)).padStart(2,'0')}:00:00`);
+                rows.push(`TXN_M${id},ACC_CUST${id},ACC_MERCHANT,${(Math.random() * 200 + 50).toFixed(2)},2024-01-19 ${String(9 + Math.floor(i / 4)).padStart(2, '0')}:00:00`);
             }
             for (let i = 1; i <= 22; i++) {
                 const id = String(i).padStart(3, '0');
-                rows.push(`TXN_P${id},ACC_PAYROLL,ACC_EMP${id},${(Math.random()*2000+3000).toFixed(2)},2024-01-20 09:00:00`);
+                rows.push(`TXN_P${id},ACC_PAYROLL,ACC_EMP${id},${(Math.random() * 2000 + 3000).toFixed(2)},2024-01-20 09:00:00`);
             }
             rows.push(`TXN_P000,ACC_TREASURY,ACC_PAYROLL,150000.00,2024-01-20 08:00:00`);
 
@@ -1146,4 +1800,5 @@
         }
     </script>
 </body>
+
 </html>

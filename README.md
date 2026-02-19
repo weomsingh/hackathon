@@ -35,29 +35,41 @@ This application runs entirely in the browser. It processes CSV transaction data
 - **Logic**: Excludes high-volume merchants (High Fan-in, Low Fan-out) and Payroll accounts (High Fan-out, Low Fan-in) from being flagged.
 
 ## Suspicion Score Methodology
-Accounts are scored (0-100) based on detected patterns:
-- **Cycle Membership**: 30-40 points (depending on length)
-- **Smurfing**: 25 points
-- **Shell Account**: 20 points
-- **High Velocity**: 15 points
-- **Multi-Pattern Bonus**: 10 points
+The system assigns a risk score (0-100) to each account based on a weighted sum of detected behaviors. This multi-factor approach minimizes false positives by requiring significant evidence for a high score.
+
+**Score Components:**
+- **Cycle Membership**: 
+  - **3-Cycle (A-B-C-A)**: +40 points (Hardest to detect, highly indicative of layering)
+  - **4-Cycle**: +35 points
+  - **5-Cycle**: +30 points
+- **Smurfing (Structuring)**: +25 points. Triggered when an account receives/sends funds from 10+ distinct entities within a 72-hour window.
+- **Shell Account Behavior**: +20 points. Triggered for intermediate nodes in a long chain with low total activity (2-3 transactions).
+- **High Velocity**: +15 points. Triggered when transaction frequency exceeds 2/hour.
+- **Multi-Pattern Bonus**: +10 points. Added if an account exhibits multiple distinct fraud types (e.g., Smurfing AND Cycling).
+
+## Input Specification
+The application strictly parses CSV files with the following columns:
+- `transaction_id` (String): Unique identifier
+- `sender_id` (String): Originator account
+- `receiver_id` (String): Beneficiary account
+- `amount` (Float): Value of transaction
+- `timestamp` (DateTime): `YYYY-MM-DD HH:MM:SS` format
 
 ## Installation & Setup
 No installation required.
-1. Clone the repository.
+1. Download `index.html`.
 2. Open `index.html` in any modern web browser (Chrome, Firefox, Safari, Edge).
 3. OR drag the file to [Netlify Drop](https://app.netlify.com/drop) for instant hosting.
 
 ## Usage Instructions
 1. **Upload**: Drag & drop a CSV file or use the "Browse File" button.
-2. **CSV Format**: Must contain columns: `transaction_id`, `sender_id`, `receiver_id`, `amount`, `timestamp` (YYYY-MM-DD HH:MM:SS).
-3. **Demo**: Click "Load Demo Data" to see the system in action with generated fraud patterns.
-4. **Analysis**: Watch the progress bar as the engine detects patterns.
-5. **Results**: valid explore the graph, view the suspect list, and download the JSON report.
+2. **Demo**: Click "Load Demo Data" to see the system in action.
+3. **Analysis**: Watch the progress bar as the engine detects patterns.
+4. **Results**: Explore the interactive graph, view the suspect list, and download the JSON report.
 
 ## Known Limitations
-- Graph rendering may become slow with >2000 nodes (the app limits rendering to top 200 nodes for performance).
-- Legitimate account heuristics are tuned for general banking patterns and may need adjustment for specific datasets.
+- Graph rendering may become slow with >2000 nodes (limits rendering to top 200 nodes for performance).
+- Legitimate account heuristics are tuned for general patterns and may need adjustment for specific datasets.
 
 ## Team Members
 [TO BE ADDED BY USER]
