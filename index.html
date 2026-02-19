@@ -4,26 +4,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Forensics Engine</title>
+    <title>Nexus Analyzer Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0e1a;
-            --surface: #111827;
-            --surface2: #1a2235;
-            --border: #1e2d45;
-            --accent: #00d4ff;
-            --accent2: #ff4d6d;
-            --accent3: #ffd60a;
-            --green: #00e676;
-            --text: #e2e8f0;
-            --text-muted: #64748b;
+            --bg: #050b14;
+            --surface: #0a1120;
+            --surface2: #131c2d;
+            --border: #1f3a5f;
+            --accent: #00f3ff;
+            /* Cyan Neon */
+            --accent2: #bc13fe;
+            /* Purple Neon */
+            --accent3: #ffe600;
+            /* Yellow Neon */
+            --green: #00ff9d;
+            --text: #e0f7ff;
+            --text-muted: #84aec5;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Courier New', monospace;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        h1,
+        h2,
+        h3,
+        .logo-box,
+        .btn,
+        .panel-title,
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
         }
 
         body {
@@ -413,18 +431,21 @@
             flex: 1;
             overflow: hidden;
             position: relative;
-            background: radial-gradient(circle at center, #1a2235 0%, #0a0e1a 100%);
+            background: radial-gradient(circle at center, #0d1b33 0%, #050b14 100%);
+            box-shadow: inset 0 0 50px rgba(0, 243, 255, 0.05);
         }
 
         .graph-legend {
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(17, 24, 39, 0.8);
+            background: rgba(10, 17, 32, 0.9);
             padding: 10px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
             font-size: 0.7rem;
             pointer-events: none;
+            backdrop-filter: blur(4px);
         }
 
         .legend-item {
@@ -693,10 +714,10 @@
 
     <header>
         <div class="logo-area">
-            <div class="logo-box">🔍</div>
+            <div class="logo-box" style="box-shadow: 0 0 15px var(--accent); border-color: var(--accent);">⌬</div>
             <div class="app-title">
-                <h1>FINANCIAL FORENSICS ENGINE</h1>
-                <p>Money Muling Detection System</p>
+                <h1 style="text-shadow: 0 0 5px var(--accent);">NEXUS ANALYZER PRO</h1>
+                <p>Multi-Language Forensic & Structural Engine</p>
             </div>
         </div>
         <div class="sys-status">
@@ -710,32 +731,29 @@
 
     <div id="upload-section">
         <div class="upload-zone" id="drop-zone">
-            <div class="upload-title">Money Muling Detection</div>
+            <div class="upload-title" style="text-shadow: 0 0 10px var(--accent);">NEXUS CORE ANALYZER</div>
             <div class="upload-desc">
-                Upload your transaction data to detect financial crime networks.<br>
-                Accepts <b>.CSV</b> files with up to 10,000 transactions.
+                Upload Data Streams or Source Code for Analysis.<br>
+                Accepts <b>.CSV, .JAVA, .C, .CPP, .HTML, .CSS, .JS, .PY</b>
             </div>
 
             <div class="schema-hint">
-                <div style="margin-bottom:6px;font-weight:bold;color:var(--accent);">REQUIRED CSV COLUMNS</div>
-                <code>transaction_id, sender_id, receiver_id, amount, timestamp</code>
+                <div style="margin-bottom:6px;font-weight:bold;color:var(--accent);">SUPPORTED MODES</div>
+                <code>Financial Forensics (CSV) • Code Structural Analysis (Src)</code>
             </div>
 
             <div id="error-msg" class="text-danger hidden"></div>
 
             <div class="btn-group">
                 <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
-                    📂 Browse CSV File
-                </button>
-                <button class="btn btn-outline" onclick="loadDemoData()">
-                    🚀 Load Demo Data
+                    📂 INITIALIZE UPLOAD
                 </button>
             </div>
-            <div style="margin-top:1rem;font-size:0.8rem;color:var(--text-muted);">
-                <span style="cursor:pointer;text-decoration:underline;" onclick="toggleGuide()">What is Money
-                    Muling?</span>
+            <div style="margin-top:1rem;font-size:0.8rem;color:var(--text-muted);opacity:0.7;">
+                SYSTEM READY FOR INPUT
             </div>
-            <input type="file" id="file-input" accept=".csv" class="hidden" onchange="handleFileUpload(this.files[0])">
+            <input type="file" id="file-input" accept=".csv,.java,.c,.cpp,.h,.html,.css,.js,.py,.ts,.json,.xml"
+                class="hidden" onchange="handleFileUpload(this.files[0])">
         </div>
     </div>
 
@@ -1033,14 +1051,98 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const text = e.target.result;
-                processTransactions(text);
+                if (file.name.toLowerCase().endsWith('.csv')) {
+                    processTransactions(text);
+                } else {
+                    processCodeFile(text, file.name);
+                }
             };
             reader.readAsText(file);
         }
 
-        function loadDemoData() {
-            const data = generateDemoData();
-            processTransactions(data);
+        // processCodeFile handles Non-CSV files by creating a syntax token graph
+        async function processCodeFile(text, filename) {
+            const startTime = performance.now();
+
+            // Reset state
+            nodes = new Map();
+            edges = [];
+            suspiciousAccounts = []; // Not used for code
+            fraudRings = []; // Not used for code
+            suspiciousSet = new Set();
+            ringMemberSet = new Set();
+
+            document.getElementById('error-msg').classList.add('hidden');
+            showSection('progress-section');
+            document.getElementById('upload-section').classList.add('hidden');
+            document.getElementById('reset-btn').classList.remove('hidden');
+
+            await updateProgress(20, 'Tokenizing Source...', 0);
+
+            // Simple Tokenizer
+            // Split by non-alphanumeric, keep only words > 3 chars
+            const rawTokens = text.split(/[^a-zA-Z0-9_]+/).filter(t => t.length > 3);
+
+            // Frequency map
+            const freq = new Map();
+            rawTokens.forEach(t => freq.set(t, (freq.get(t) || 0) + 1));
+
+            // Top 150 tokens as nodes
+            const sortedTokens = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 150);
+            const topTokensSet = new Set(sortedTokens.map(e => e[0]));
+
+            await updateProgress(50, 'Building Syntax Graph...', 1);
+
+            // Create Nodes
+            sortedTokens.forEach(([token, count]) => {
+                nodes.set(token, { id: token, txCount: count });
+            });
+
+            // Create Edges (Co-occurrence in original sequence)
+            // If two top-tokens appear near each other (distance < 5), link them
+            // Filter rawTokens to only include top tokens to speed up
+            const filteredSeq = rawTokens.filter(t => topTokensSet.has(t));
+
+            for (let i = 0; i < filteredSeq.length - 1; i++) {
+                const src = filteredSeq[i];
+                const tgt = filteredSeq[i + 1];
+                if (src !== tgt) {
+                    edges.push({ source: src, target: tgt, amount: 1 });
+                }
+            }
+
+            await updateProgress(100, 'Rendering Neural Map', 4);
+
+            const endTime = performance.now();
+            processingTime = (endTime - startTime) / 1000;
+
+            await sleep(400);
+
+            // Update Stats for Code Mode
+            document.getElementById('stat-total').textContent = nodes.size;
+            document.getElementById('stat-suspicious').textContent = edges.length;
+            document.getElementById('stat-rings').textContent = "N/A";
+            document.getElementById('stat-time').textContent = processingTime.toFixed(2) + 's';
+
+            // Hide irrelevant sections for code mode
+            document.querySelector('.stat-label:nth-of-type(1)').textContent = "Syntax Nodes";
+            document.querySelectorAll('.stat-card')[1].querySelector('.stat-label').textContent = "Connections";
+
+            showSection('stats-row');
+            showSection('main-grid');
+
+            // Remove list panels for code mode
+            document.querySelector('.right-panel').classList.add('hidden');
+            document.querySelector('.graph-panel').style.minWidth = '100%';
+
+            const nodesArr = Array.from(nodes.values()).map(n => ({
+                id: n.id,
+                suspicionScore: n.txCount, // Use count for size
+                ringId: 'NONE',
+                patterns: []
+            }));
+
+            renderGraph(nodesArr, edges, new Set(), new Set());
         }
 
         async function processTransactions(csvText) {
@@ -1516,7 +1618,7 @@
             const svg = d3.select('#graph-svg');
             svg.selectAll('*').remove();
 
-            const width = container.clientWidth;
+            const width = container.clientWidth || 800;
             const height = 600;
 
             const defs = svg.append('defs');
@@ -1532,7 +1634,7 @@
                 .attr('orient', 'auto')
                 .append('path')
                 .attr('d', 'M0,-5L10,0L0,5')
-                .attr('fill', '#1e2d45');
+                .attr('fill', '#1f3a5f');
 
             defs.append('marker')
                 .attr('id', 'arrow-ring')
@@ -1544,31 +1646,39 @@
                 .attr('orient', 'auto')
                 .append('path')
                 .attr('d', 'M0,-5L10,0L0,5')
-                .attr('fill', '#ff4d6d');
+                .attr('fill', '#bc13fe');
 
             const simulation = d3.forceSimulation(nodesData)
                 .force('link', d3.forceLink(edgesData).id(d => d.id).distance(80))
-                .force('charge', d3.forceManyBody().strength(-200))
+                .force('charge', d3.forceManyBody().strength(-300))
                 .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collide', d3.forceCollide(20));
+                .force('collide', d3.forceCollide(25))
+                .stop(); // Stop immediately, we will manual tick
+
+            // Manual tick for static instant result
+            // Run 300 ticks to stabilize
+            for (let i = 0; i < 300; ++i) simulation.tick();
 
             const link = svg.append('g').selectAll('line')
                 .data(edgesData).join('line')
-                .attr('stroke', d => (ringMemberSet.has(d.source.id) && ringMemberSet.has(d.target.id)) ? '#ff4d6d' : '#1e2d45')
-                .attr('stroke-width', d => (ringMemberSet.has(d.source.id) && ringMemberSet.has(d.target.id)) ? 2 : 1.5)
-                .attr('marker-end', d => (ringMemberSet.has(d.source.id) && ringMemberSet.has(d.target.id)) ? 'url(#arrow-ring)' : 'url(#arrow-normal)');
+                .attr('stroke', d => (ringMemberSet.has(d.source.id) && ringMemberSet.has(d.target.id)) ? '#bc13fe' : '#1f3a5f')
+                .attr('stroke-width', d => (ringMemberSet.has(d.source.id) && ringMemberSet.has(d.target.id)) ? 2 : 1)
+                .attr('marker-end', d => (ringMemberSet.has(d.source.id) && ringMemberSet.has(d.target.id)) ? 'url(#arrow-ring)' : 'url(#arrow-normal)')
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
 
             const nodeGroup = svg.append('g').selectAll('g')
                 .data(nodesData).join('g')
-                .call(d3.drag()
-                    .on('start', dragStarted)
-                    .on('drag', dragged)
-                    .on('end', dragEnded));
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+
+            // Removed Drag Behavior per request
 
             nodeGroup.append('circle')
                 .attr('r', d => ringMemberSet.has(d.id) ? 10 : suspiciousSet.has(d.id) ? 8 : 6)
-                .attr('fill', d => ringMemberSet.has(d.id) ? '#ff4d6d' : suspiciousSet.has(d.id) ? '#ffd60a' : '#00e676')
-                .attr('stroke', d => ringMemberSet.has(d.id) ? '#ff4d6d' : 'transparent')
+                .attr('fill', d => ringMemberSet.has(d.id) ? '#bc13fe' : suspiciousSet.has(d.id) ? '#ffe600' : '#00f3ff')
+                .attr('stroke', d => ringMemberSet.has(d.id) ? '#bc13fe' : 'transparent')
                 .attr('stroke-width', 2)
                 .attr('opacity', 0.9);
 
@@ -1632,15 +1742,10 @@
                 nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
             });
 
-            function dragStarted(event, d) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x; d.fy = d.y;
-            }
-            function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
-            function dragEnded(event, d) {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null; d.fy = null;
-            }
+            // Removed drag event handlers
+            function dragStarted(event, d) { }
+            function dragged(event, d) { }
+            function dragEnded(event, d) { }
         }
 
         function renderSuspectList() {
@@ -1733,50 +1838,7 @@
         function hideSection(id) { document.getElementById(id).classList.add('hidden'); }
         function showSection(id) { document.getElementById(id).classList.remove('hidden'); }
 
-        function generateDemoData() {
-            const rows = ['transaction_id,sender_id,receiver_id,amount,timestamp'];
 
-            // Pattern 1: Cycle of 3
-            rows.push(`TXN_001,ACC_A01,ACC_A02,1500.00,2024-01-15 10:00:00`);
-            rows.push(`TXN_002,ACC_A02,ACC_A03,1480.00,2024-01-15 11:30:00`);
-            rows.push(`TXN_003,ACC_A03,ACC_A01,1460.00,2024-01-15 13:00:00`);
-
-            // Pattern 2: Cycle of 4
-            rows.push(`TXN_004,ACC_B01,ACC_B02,3000.00,2024-01-16 09:00:00`);
-            rows.push(`TXN_005,ACC_B02,ACC_B03,2950.00,2024-01-16 10:30:00`);
-            rows.push(`TXN_006,ACC_B03,ACC_B04,2900.00,2024-01-16 12:00:00`);
-            rows.push(`TXN_007,ACC_B04,ACC_B01,2850.00,2024-01-16 14:00:00`);
-
-            // Pattern 3: Fan-in Smurfing
-            for (let i = 1; i <= 12; i++) {
-                const id = String(i).padStart(3, '0');
-                rows.push(`TXN_S${id},ACC_FEEDER${id},ACC_SMURF01,${(Math.random() * 400 + 100).toFixed(2)},2024-01-17 ${String(8 + Math.floor(i / 2)).padStart(2, '0')}:${String((i % 2) * 30).padStart(2, '0')}:00`);
-            }
-            // Fan-out
-            for (let i = 1; i <= 11; i++) {
-                const id = String(i).padStart(3, '0');
-                rows.push(`TXN_O${id},ACC_SMURF01,ACC_OUT${id},${(Math.random() * 300 + 80).toFixed(2)},2024-01-17 ${String(14 + Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}:00`);
-            }
-
-            // Pattern 4: Shell Chain
-            rows.push(`TXN_H001,ACC_ORIG01,ACC_SHELL1,5000.00,2024-01-18 09:00:00`);
-            rows.push(`TXN_H002,ACC_SHELL1,ACC_SHELL2,4900.00,2024-01-18 11:00:00`);
-            rows.push(`TXN_H003,ACC_SHELL2,ACC_SHELL3,4800.00,2024-01-18 14:00:00`);
-            rows.push(`TXN_H004,ACC_SHELL3,ACC_DEST01,4700.00,2024-01-18 17:00:00`);
-
-            // Legitimate
-            for (let i = 1; i <= 25; i++) {
-                const id = String(i).padStart(3, '0');
-                rows.push(`TXN_M${id},ACC_CUST${id},ACC_MERCHANT,${(Math.random() * 200 + 50).toFixed(2)},2024-01-19 ${String(9 + Math.floor(i / 4)).padStart(2, '0')}:00:00`);
-            }
-            for (let i = 1; i <= 22; i++) {
-                const id = String(i).padStart(3, '0');
-                rows.push(`TXN_P${id},ACC_PAYROLL,ACC_EMP${id},${(Math.random() * 2000 + 3000).toFixed(2)},2024-01-20 09:00:00`);
-            }
-            rows.push(`TXN_P000,ACC_TREASURY,ACC_PAYROLL,150000.00,2024-01-20 08:00:00`);
-
-            return rows.join('\n');
-        }
 
         function downloadJSON() {
             const report = {
