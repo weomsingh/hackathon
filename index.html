@@ -1086,9 +1086,9 @@
             // improved validation - check for required columns (case-insensitive)
             // mapped to our internal keys
             const requiredMap = {
-                'transaction_id': ['transaction_id', 'txn_id', 'id'],
-                'sender_id': ['sender_id', 'source', 'from', 'sender'],
-                'receiver_id': ['receiver_id', 'target', 'to', 'receiver'],
+                'transaction_id': ['transaction_id', 'txn_id', 'id', 'transaction'],
+                'sender_id': ['sender_id', 'source', 'from', 'sender', 'origin'],
+                'receiver_id': ['receiver_id', 'target', 'to', 'receiver', 'destination'],
                 'amount': ['amount', 'amt', 'value'],
                 'timestamp': ['timestamp', 'date', 'time', 'created_at']
             };
@@ -1099,7 +1099,7 @@
 
             // Try to find each required field
             for (const [key, alternatives] of Object.entries(requiredMap)) {
-                const found = firstRowKeys.find(k => alternatives.includes(k));
+                const found = firstRowKeys.find(k => alternatives.includes(k) || alternatives.some(alt => k.includes(alt)));
                 if (found) {
                     columnMapping[key] = found;
                 } else {
@@ -1108,7 +1108,7 @@
             }
 
             if (missing.length > 0) {
-                showError(`Missing required columns: ${missing.join(', ')}.\nAccepted variations: transaction_id (id), sender_id (from), receiver_id (to), amount, timestamp.`);
+                showError(`Missing required columns: ${missing.join(', ')}.\n\nFound columns: ${firstRowKeys.join(', ')}\n\nExpected: transaction_id, sender_id, receiver_id, amount, timestamp.`);
                 return;
             }
 
@@ -1119,7 +1119,7 @@
                 receiver_id: row[columnMapping.receiver_id],
                 amount: row[columnMapping.amount],
                 timestamp: row[columnMapping.timestamp]
-            }));
+            })).filter(row => row.transaction_id && row.sender_id && row.receiver_id); // Filter out empty/malformed rows
 
             await updateProgress(25, 'Building Graph', 1);
             buildGraph(normalizedData);
