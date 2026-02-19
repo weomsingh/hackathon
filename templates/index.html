@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RingGuard | Financial Fraud Detection Engine</title>
+    <!-- Fraunces & DM Sans/Mono Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;500;700&family=Fraunces:opsz,wght@9..144,300;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">
+            <span class="logo-icon">RG</span>
+            <div>
+                <h1>RingGuard</h1>
+                <p>Advanced Financial Forensics Engine</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="#" class="nav-link">Documentation</a>
+            <a href="https://github.com/your-repo" class="nav-link">GitHub</a>
+        </div>
+    </header>
+
+    <main>
+        <!-- UPLOAD SECTION -->
+        <section class="upload-section">
+            <div class="drop-zone" id="dropZone">
+                <div class="empty-state">
+                    <div class="illu">🔍</div>
+                    <h2>Upload a transaction CSV to begin analysis</h2>
+                    <p>RingGuard will detect circular fund flows, smurfing patterns, and shell account chains</p>
+                    <button class="btn-upload">Select CSV File</button>
+                    <input type="file" id="fileInput" accept=".csv" hidden>
+                </div>
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <button id="analyzeBtn" class="btn-primary" disabled>
+                Analyze for Fraud Rings →
+            </button>
+
+            <div id="errorBox" class="error-card" style="display: none;">
+                <!-- Error content -->
+            </div>
+        </section>
+
+        <!-- RESULTS SECTION (Hidden initially) -->
+        <section id="resultsSection" class="results-section" style="display: none;">
+
+            <!-- SUMMARY STATS -->
+            <div class="summary-grid" id="summaryStats">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- GRAPH INTERFACE -->
+            <div class="graph-wrapper">
+                <div class="graph-header">
+                    <h3>Network Risk Graph</h3>
+                    <div class="graph-controls">
+                        <button class="control-pill" id="zoomInBtn">+</button>
+                        <button class="control-pill" id="zoomOutBtn">-</button>
+                        <button class="control-pill" id="resetViewBtn">Reset</button>
+                        <button class="control-pill toggle" id="highlightFraudBtn">Highlight Fraud Only</button>
+                        <button class="control-pill toggle active" id="showAllConnectionsBtn">Show Connections</button>
+                    </div>
+                </div>
+
+                <div id="graphContainer" class="graph-container"></div>
+
+                <!-- Tooltip -->
+                <div id="nodeTooltip" class="node-tooltip" style="display: none;"></div>
+
+                <!-- Node Detail Panel -->
+                <div id="nodeDetailPanel" class="detail-panel" style="display: none;">
+                    <div class="panel-header">
+                        <h4>Account Analysis</h4>
+                        <button class="close-panel"
+                            onclick="document.getElementById('nodeDetailPanel').style.display='none'">×</button>
+                    </div>
+                    <div id="panelContent"></div>
+                </div>
+            </div>
+
+            <!-- FRAUD RINGS TABLE -->
+            <div class="table-card">
+                <div class="card-header">
+                    <h3>Detected Fraud Rings</h3>
+                    <button class="btn-outline-sm">Export Table as CSV</button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ring ID</th>
+                                <th>Pattern Type</th>
+                                <th>Members</th>
+                                <th>Risk Score</th>
+                                <th>Member Accounts</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fraudRingsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SUSPICIOUS ACCOUNTS TABLE -->
+            <div class="table-card">
+                <div class="card-header">
+                    <div>
+                        <h3>Flagged Accounts</h3>
+                        <p class="subtitle">(sorted by suspicion score, highest risk first)</p>
+                    </div>
+                    <div class="search-bar">
+                        <input type="text" id="accountSearch" placeholder="Filter by ID, Pattern, Ring...">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Account ID</th>
+                                <th>Suspicion Score</th>
+                                <th>Ring</th>
+                                <th>Detected Patterns</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="suspiciousAccountsTable"></tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <!-- Pagination controls if needed -->
+                </div>
+            </div>
+
+            <!-- EXPORT SECTION -->
+            <div class="export-section">
+                <div class="export-actions">
+                    <button id="downloadJsonBtn" class="btn-amber">⬇ Download JSON Report</button>
+                    <button id="copyJsonBtn" class="btn-outline-amber">📋 Copy JSON to Clipboard</button>
+                    <button id="exportCsvBtn" class="btn-outline-teal">📊 Export Accounts CSV</button>
+                </div>
+
+                <div class="json-preview-container">
+                    <summary>Preview JSON Output ▼</summary>
+                    <pre id="jsonPreview" class="code-block"></pre>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
