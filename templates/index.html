@@ -1,134 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RingGuard - Money Muling Detection</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RingGuard | Forensic Intelligence Engine</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
-  <div class="layout">
-    <header class="topbar">
-      <div>
-        <h1>RingGuard</h1>
-        <p>Forensic Transaction Intelligence</p>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <span>RingGuard</span>
+    </div>
+
+    <div class="nav">
+      <div class="nav-item active" id="nav-dash">
+        <i data-lucide="layout-grid"></i> Dashboard
       </div>
-      <a class="link-btn" href="{{ url_for('static', filename='sample_transactions.csv') }}">Use Sample CSV</a>
-    </header>
-
-    <section class="card upload-card">
-      <h2>Upload Transactions</h2>
-      <p class="muted">Upload CSV to detect circular flows, smurfing patterns, and shell chains.</p>
-      <div id="dropZone" class="drop-zone">
-        <div>Drop .csv file here or click to browse</div>
-        <input id="fileInput" type="file" accept=".csv" hidden />
+      <div class="nav-item" id="nav-graph">
+        <i data-lucide="network"></i> Graph Analysis
       </div>
-      <div id="fileInfo" class="file-info"></div>
-      <button id="analyzeBtn" class="btn btn-primary">Analyze for Fraud Rings →</button>
-      <div id="errorBox" class="error-box"></div>
-    </section>
-
-    <section id="emptyState" class="empty-state card">
-      <div class="big-icon">🔍</div>
-      <p class="empty-title">Upload a transaction CSV to begin analysis</p>
-      <p class="muted">RingGuard will detect circular fund flows, smurfing patterns, and shell account chains</p>
-    </section>
-
-    <section id="resultsSection" class="results-section" style="display:none;">
-      <div id="summaryGrid" class="summary-grid"></div>
-
-      <div class="graph-and-side">
-        <div class="card graph-card">
-          <div class="card-head">
-            <h3>Transaction Network Graph</h3>
-            <div class="muted small">Hover node for tooltip, click node for detail panel</div>
-          </div>
-          <div id="graphContainer"></div>
-          <div class="graph-controls">
-            <button id="zoomInBtn" class="pill-btn">Zoom In</button>
-            <button id="zoomOutBtn" class="pill-btn">Zoom Out</button>
-            <button id="resetViewBtn" class="pill-btn">Reset View</button>
-            <button id="highlightFraudBtn" class="pill-btn">Highlight Fraud Only</button>
-            <button id="showAllConnectionsBtn" class="pill-btn">Show All Connections</button>
-          </div>
-        </div>
-
-        <aside class="card side-card">
-          <h3>Node Detail</h3>
-          <p class="muted">Click a node to inspect account details.</p>
-        </aside>
+      <div style="flex:1"></div>
+      <div class="nav-item" onclick="location.reload()">
+        <i data-lucide="upload-cloud"></i> New Upload
       </div>
-
-      <div class="card table-card">
-        <div class="card-head between">
-          <h3>Detected Fraud Rings</h3>
-          <button id="exportTableCsvBtn" class="pill-btn">Export Table as CSV</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Ring ID</th>
-              <th>Pattern Type</th>
-              <th>Members</th>
-              <th>Risk Score</th>
-              <th>Member Accounts</th>
-            </tr>
-          </thead>
-          <tbody id="ringsTableBody"></tbody>
-        </table>
-      </div>
-
-      <div class="card table-card">
-        <div class="card-head">
-          <h3>Flagged Accounts</h3>
-          <p class="muted">(sorted by suspicion score, highest risk first)</p>
-        </div>
-        <div class="table-tools">
-          <input id="accountSearch" type="text" placeholder="Filter by account ID, pattern, or ring ID" />
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Account ID</th>
-              <th>Suspicion Score</th>
-              <th>Ring</th>
-              <th>Detected Patterns</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="suspiciousAccountsTable"></tbody>
-        </table>
-        <div class="pagination">
-          <button id="prevPageBtn" class="pill-btn">Prev</button>
-          <span id="pageInfo" class="muted"></span>
-          <button id="nextPageBtn" class="pill-btn">Next</button>
-        </div>
-      </div>
-
-      <div class="card export-card">
-        <div class="export-actions">
-          <button id="downloadJsonBtn" class="btn btn-primary">⬇ Download JSON Report</button>
-          <button id="copyJsonBtn" class="btn btn-outline-amber">📋 Copy JSON to Clipboard</button>
-          <button id="exportCsvBtn" class="btn btn-outline-teal">📊 Export Accounts CSV</button>
-        </div>
-        <button id="togglePreviewBtn" class="pill-btn">Preview JSON Output ▼</button>
-        <pre id="jsonPreview" class="json-preview" style="display:none;"></pre>
-      </div>
-    </section>
-  </div>
-
-  <div id="nodeTooltip" class="node-tooltip" style="display:none;"></div>
-
-  <aside id="nodeDetailPanel" class="node-detail-panel">
-    <button id="closePanelBtn" class="panel-close">×</button>
-    <div id="nodeDetailContent"></div>
+    </div>
   </aside>
 
+  <!-- Main Content -->
+  <main class="main">
+    <header class="topbar">
+      <div class="page-title">Dashboard Overview</div>
+      <div style="color:var(--text-secondary); font-size:0.85rem">v2.4.0 Enterprise</div>
+    </header>
+
+    <!-- Upload View -->
+    <section id="view-upload" class="view-section active">
+      <div class="upload-hero">
+        <h1 class="hero-head">Financial Fraud Detection</h1>
+        <p style="color:var(--text-secondary); margin-bottom:2rem">
+          Upload transaction logs to detect <span style="color:var(--accent)">Money Muling</span>,
+          <span style="color:var(--accent)">Smurfing</span>, and <span style="color:var(--accent)">Shell Chains</span>.
+        </p>
+
+        <div class="drop-zone" id="dropZone">
+          <i data-lucide="file-up" style="width:48px; height:48px; color:var(--text-secondary); margin-bottom:1rem"></i>
+          <h3>Drop CSV File Here</h3>
+          <p style="font-size:0.9rem; color:var(--text-secondary)">drag & drop or click to browse</p>
+          <input type="file" id="fileInput" accept=".csv" hidden>
+        </div>
+
+        <button id="analyzeBtn" class="btn-primary" disabled>Analyze for Fraud Rings →</button>
+      </div>
+    </section>
+
+    <!-- Dashboard View -->
+    <section id="view-dashboard" class="view-section">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Avg Risk Score</span>
+          <span class="kpi-value" style="color:var(--risk-high)" id="kpi-risk">0%</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Fraud Rings</span>
+          <span class="kpi-value" id="kpi-rings">0</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Flagged Accounts</span>
+          <span class="kpi-value" id="kpi-flagged">0</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Processing Time</span>
+          <span class="kpi-value" id="kpi-time">0s</span>
+        </div>
+      </div>
+
+      <div class="dashboard-layout">
+        <!-- Graph Panel -->
+        <div class="panel-card" style="position:relative">
+          <div class="panel-header">
+            <span class="panel-title">Network Topology</span>
+            <div class="graph-toolbar">
+              <button class="tool-btn" id="zoomIn"><i data-lucide="plus"></i></button>
+              <button class="tool-btn" id="zoomOut"><i data-lucide="minus"></i></button>
+              <button class="tool-btn" id="fitView"><i data-lucide="maximize"></i></button>
+            </div>
+          </div>
+          <div id="graphContainer"></div>
+        </div>
+
+        <!-- List Panel -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">High Risk Accounts</span>
+          </div>
+          <div class="list-content" id="suspiciousList"></div>
+        </div>
+      </div>
+
+      <!-- Table Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span class="panel-title">Detected Fraud Rings</span>
+          <button class="btn-primary" style="padding:0.5rem 1rem; font-size:0.8rem">Export Report</button>
+        </div>
+        <div style="padding:1rem">
+          <table>
+            <thead>
+              <tr>
+                <th>Ring ID</th>
+                <th>Pattern Type</th>
+                <th>Members</th>
+                <th>Risk Score</th>
+              </tr>
+            </thead>
+            <tbody id="ringsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Tooltip -->
+  <div id="tooltip" class="tooltip"></div>
+
   <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script>lucide.createIcons();</script>
 </body>
+
 </html>
