@@ -1,38 +1,21 @@
-# Nexus Analyzer Pro — Multi-Format Forensics Engine
+# Enterprise Forensic Engine
+## High-Precision Financial & Structural Analysis
 
-## Overview
-Nexus Analyzer Pro is an advanced, browser-based forensic visualization tool designed to analyze both financial transaction networks and software code structures. 
+### Overview
+This is a professional-grade, browser-based forensic engine designed for high-volume dataset analysis (10k+ records). It features strict heuristic filtering to eliminate false positives (Payroll/Merchants) and calculates Model Precision & Recall metrics.
 
-## Key Features
-- **Dual Mode Analysis**:
-  - **Financial Forensics**: Detects Money Muling, Smurfing, and Laundering Rings from CSV data.
-  - **Code Structural Analysis**: Visualizes syntax token relationships in source code (Java, C, Python, etc.) to identify complexity and coupling.
-- **Sci-Fi Visualization**: High-performance D3.js rendering with a futuristic neon aesthetic.
-- **Privacy First**: 100% Client-side processing. No data leaves your browser.
+### Key Capabilities
+- **Precision Targeting**: Filters out legitimate high-volume accounts (Payroll/Merchants) to focus only on genuine high-risk patterns.
+- **Fraud Ring Detection**: advanced DFS-based cycle detection for money loops.
+- **Smurfing Analysis**: Temporal fan-in/fan-out detection.
+- **Risk Subgraph Rendering**: Optimized visualization that only renders the most critical nodes and connections to ensure performance on large datasets.
+- **Dual Mode**: Supports both Financial CSV Logs and Source Code Structural Analysis.
 
-## Tech Stack
-- **Core**: HTML5, CSS3 (Neon UI), Vanilla JavaScript
-- **Visualization**: D3.js v7
-- **Data Parsing**: PapaParse (CSV) + Custom Regex Tokenizer (Code)
-
-## Supported Formats
-1. **Financial Data (.csv)**:
-   - Columns: `transaction_id`, `sender_id`, `receiver_id`, `amount`, `timestamp`
+### Supported File Formats
+1. **Financial Logs (.csv)**:
+   - `transaction_id`, `sender_id`, `receiver_id`, `amount`, `timestamp`
 2. **Source Code**:
-   - `.java`, `.c`, `.cpp`, `.h`, `.html`, `.css`, `.js`, `.py`, `.ts`, `.json`, `.xml`
+   - `.java`, `.c`, `.cpp`, `.py`, `.js`, `.ts`, `.html`, `.css`, `.json`
 
-## Usage
-1. Open `index.html` in a modern browser.
-2. Click **Initialize Upload**.
-3. Select a file. The engine automatically detects the mode:
-   - **CSV** -> Triggers Financial Fraud Detection.
-   - **Code** -> Triggers Syntax Neural Map generation.
-4. View the instant static graph network.
-
-## Visualization Guide
-- **Cyan Nodes**: Standard Accounts / Syntax Tokens.
-- **Yellow Nodes**: Suspicious Accounts.
-- **Purple Nodes/Links**: Confirmed Fraud Rings / High Coupling Clusters.
-
-## Deployment
-Drag `index.html` to [Netlify Drop](https://app.netlify.com/drop) for instant hosting.
+### Deployment
+Simply open `index.html` in any modern browser. No backend required.
