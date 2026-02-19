@@ -13,18 +13,18 @@
     <style>
         :root {
             --bg: #050b14;
-            --surface: #0a1120;
-            --surface2: #131c2d;
-            --border: #1f3a5f;
+            --surface: rgba(10, 17, 32, 0.6);
+            --surface2: rgba(19, 28, 45, 0.8);
+            --border: rgba(0, 243, 255, 0.2);
             --accent: #00f3ff;
-            /* Cyan Neon */
             --accent2: #bc13fe;
-            /* Purple Neon */
             --accent3: #ffe600;
-            /* Yellow Neon */
             --green: #00ff9d;
             --text: #e0f7ff;
             --text-muted: #84aec5;
+            --grad-1: linear-gradient(135deg, #00f3ff 0%, #bc13fe 100%);
+            --grad-2: linear-gradient(135deg, #00ff9d 0%, #00f3ff 100%);
+            --glass: rgba(255, 255, 255, 0.03);
         }
 
         * {
@@ -45,13 +45,27 @@
         }
 
         body {
-            background-color: var(--bg);
+            background-color: #050b14;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                radial-gradient(circle at 10% 20%, rgba(188, 19, 254, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 243, 255, 0.15) 0%, transparent 40%);
+            background-size: 50px 50px, 50px 50px, 100% 100%, 100% 100%;
             color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
             padding-bottom: 40px;
+        }
+
+        .gradient-text {
+            background: var(--grad-1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
         }
 
         /* Utilities */
@@ -131,15 +145,20 @@
         }
 
         .app-title h1 {
-            font-size: 1.2rem;
-            letter-spacing: 1px;
-            color: var(--text);
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            background: var(--grad-1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
         }
 
         .app-title p {
             font-size: 0.8rem;
             color: var(--text-muted);
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
         }
 
         .sys-status {
@@ -196,10 +215,11 @@
         .upload-zone {
             width: 100%;
             max-width: 800px;
-            height: 300px;
-            border: 2px dashed var(--border);
-            background: var(--surface);
-            border-radius: 8px;
+            height: 350px;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -207,12 +227,14 @@
             gap: 1.5rem;
             transition: all 0.3s;
             position: relative;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
         }
 
         .upload-zone:hover,
         .upload-zone.dragover {
             border-color: var(--accent);
-            background: var(--surface2);
+            background: rgba(0, 243, 255, 0.05);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15);
         }
 
         .upload-title {
@@ -263,8 +285,10 @@
         }
 
         .btn-primary {
-            background: var(--accent);
-            color: var(--bg);
+            background: var(--grad-1);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(188, 19, 254, 0.3);
+            border-radius: 4px;
         }
 
         .btn-primary:hover {
@@ -317,8 +341,9 @@
         .progress-fill {
             width: 0%;
             height: 100%;
-            background: var(--accent);
+            background: var(--grad-2);
             transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
         }
 
         .progress-label {
@@ -714,9 +739,11 @@
 
     <header>
         <div class="logo-area">
-            <div class="logo-box" style="box-shadow: 0 0 15px var(--accent); border-color: var(--accent);">⌬</div>
+            <div class="logo-box"
+                style="box-shadow: 0 0 15px var(--accent); border-color: var(--accent); background: linear-gradient(135deg, rgba(0,243,255,0.2), rgba(188,19,254,0.2));">
+                ⌬</div>
             <div class="app-title">
-                <h1 style="text-shadow: 0 0 5px var(--accent);">NEXUS ANALYZER PRO</h1>
+                <h1>NEXUS ANALYZER PRO</h1>
                 <p>Multi-Language Forensic & Structural Engine</p>
             </div>
         </div>
@@ -731,7 +758,7 @@
 
     <div id="upload-section">
         <div class="upload-zone" id="drop-zone">
-            <div class="upload-title" style="text-shadow: 0 0 10px var(--accent);">NEXUS CORE ANALYZER</div>
+            <div class="upload-title gradient-text">NEXUS CORE ANALYZER</div>
             <div class="upload-desc">
                 Upload Data Streams or Source Code for Analysis.<br>
                 Accepts <b>.CSV, .JAVA, .C, .CPP, .HTML, .CSS, .JS, .PY</b>
